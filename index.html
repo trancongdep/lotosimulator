@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTO Sim v1.5</title>
+    <title>LOTO Sim v1.6</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -11,13 +11,13 @@
     <style>
         :root {
             --bg-dark: #2f3640;
-            --sidebar-collapsed: 60px;
-            --sidebar-expanded: 240px; /* Rút gọn chiều rộng mở rộng */
+            --sidebar-width: 260px;
             --primary: #00a8ff;
             --secondary: #9c88ff;
             --danger: #e84118;
             --success: #4cd137;
             --text-color: #f5f6fa;
+            --header-height: 50px;
         }
 
         body, html {
@@ -28,60 +28,62 @@
             overflow: hidden;
         }
 
-        /* --- HEADER (COMPACT) --- */
+        /* --- HEADER --- */
         .header {
-            height: 40px; background: #1e272e;
+            height: var(--header-height); background: #1e272e;
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 15px; border-bottom: 1px solid #444;
             position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
-        }
-        .app-title { font-weight: bold; letter-spacing: 1px; color: var(--primary); font-size: 1rem;}
-        .version-badge { font-size: 0.75rem; background: #444; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 5px; }
-        .user-display { 
-            font-size: 0.9rem; color: #dcdde1; 
-            max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* --- SIDEBAR (NAVIGATION + TOOLS) --- */
+        /* HAMBURGER BUTTON (NÚT 3 GẠCH) */
+        .hamburger-btn {
+            background: transparent; border: 1px solid #555; color: white;
+            font-size: 1.5rem; cursor: pointer; padding: 5px 10px; border-radius: 4px;
+            margin-right: 15px; display: flex; align-items: center; justify-content: center;
+        }
+        .hamburger-btn:hover { background: rgba(255,255,255,0.1); border-color: white; }
+
+        .app-branding { display: flex; align-items: center; }
+        .app-title { font-weight: bold; letter-spacing: 1px; color: var(--primary); font-size: 1.1rem; margin-right: 10px;}
+        .version-badge { font-size: 0.75rem; background: #444; color: white; padding: 2px 5px; border-radius: 3px; }
+        .user-display { font-size: 0.9rem; color: #dcdde1; font-style: italic; }
+
+        /* --- SIDEBAR (SLIDE OUT) --- */
         .sidebar {
-            position: fixed; left: 0; top: 40px; bottom: 0;
-            width: var(--sidebar-collapsed);
+            position: fixed; left: 0; top: var(--header-height); bottom: 0;
+            width: var(--sidebar-width);
             background: #2f3640;
             border-right: 1px solid #444;
             display: flex; flex-direction: column;
-            transition: width 0.2s ease-in-out;
-            z-index: 1000; overflow: hidden;
+            /* Ẩn sidebar sang bên trái */
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000; overflow-y: auto;
             box-shadow: 2px 0 10px rgba(0,0,0,0.5);
         }
         
-        .sidebar:hover { width: var(--sidebar-expanded); }
+        /* Class để hiện sidebar */
+        .sidebar.open { transform: translateX(0); }
 
-        /* Sidebar Section Headers */
         .sb-header {
-            padding: 15px 0 5px 20px; font-size: 0.7rem; color: #718093; 
-            text-transform: uppercase; white-space: nowrap; opacity: 0; transition: 0.2s;
+            padding: 15px 20px 5px; font-size: 0.8rem; color: #718093; 
+            text-transform: uppercase; font-weight: bold; margin-top: 10px; border-bottom: 1px solid #444;
         }
-        .sidebar:hover .sb-header { opacity: 1; }
 
         /* Menu Items */
         .menu-item {
             display: flex; align-items: center;
-            height: 45px; width: 100%;
-            background: transparent; border: none;
-            color: #dcdde1; cursor: pointer;
-            transition: 0.2s; text-decoration: none; padding: 0;
+            padding: 15px 20px; width: 100%;
+            background: transparent; border: none; border-bottom: 1px solid #353b48;
+            color: #dcdde1; cursor: pointer; text-align: left;
+            transition: 0.2s; font-size: 1rem;
         }
-        .menu-item:hover { background: rgba(255,255,255,0.05); color: white; }
-        .menu-item.active { background: rgba(0, 168, 255, 0.1); border-left: 3px solid var(--primary); color: var(--primary); }
+        .menu-item:hover { background: rgba(255,255,255,0.05); color: white; padding-left: 25px; }
+        .menu-item.active { background: rgba(0, 168, 255, 0.1); border-left: 4px solid var(--primary); color: var(--primary); }
 
-        .menu-icon {
-            width: var(--sidebar-collapsed); min-width: var(--sidebar-collapsed);
-            text-align: center; font-size: 1.2rem;
-        }
-        .menu-label {
-            white-space: nowrap; opacity: 0; transition: 0.2s; font-size: 0.9rem;
-        }
-        .sidebar:hover .menu-label { opacity: 1; }
+        .menu-icon { margin-right: 15px; font-size: 1.2rem; min-width: 30px; text-align: center; }
 
         /* Draggable Tools */
         .tool-item { cursor: grab; }
@@ -90,215 +92,244 @@
 
         /* --- MAIN CONTENT AREA --- */
         .content-area {
-            margin-left: var(--sidebar-collapsed);
-            padding-top: 40px; height: 100vh; box-sizing: border-box;
+            margin-top: var(--header-height); 
+            height: calc(100vh - var(--header-height));
+            width: 100%;
+            box-sizing: border-box;
             background: radial-gradient(circle at center, #353b48 0%, #2f3640 100%);
+            position: relative;
         }
 
+        /* Overlay khi mở menu (để bấm ra ngoài thì đóng) */
+        .overlay-backdrop {
+            position: fixed; top: var(--header-height); left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 900; display: none;
+        }
+        .overlay-backdrop.show { display: block; }
+
+        /* Screens */
         .screen { display: none; height: 100%; width: 100%; }
         .screen.active { display: block; }
         
-        /* Views (Tabs) */
+        /* Views (Tabs) inside Student Screen */
         .view-tab {
             display: none; height: 100%; padding: 20px; box-sizing: border-box;
             flex-direction: column; align-items: center; justify-content: flex-start;
             animation: fadeIn 0.3s; overflow-y: auto;
         }
         .view-tab.active { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- ELEMENTS --- */
-        .panel { background: #353b48; padding: 20px; border-radius: 8px; border: 1px solid #555; }
+        /* --- VISUAL COMPONENTS --- */
+        .panel { background: #353b48; padding: 20px; border-radius: 8px; border: 1px solid #555; width: 100%; max-width: 800px; margin-bottom: 20px;}
         
         /* Fan */
         .fan-frame {
-            width: 200px; height: 200px; border: 8px solid #7f8c8d; border-radius: 50%;
-            background: #222; display: flex; align-items: center; justify-content: center; margin: 20px;
+            width: 220px; height: 220px; border: 8px solid #7f8c8d; border-radius: 50%;
+            background: #222; display: flex; align-items: center; justify-content: center; margin: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
-        .fan-blade { width: 180px; height: 20px; background: silver; position: absolute; border-radius: 10px; }
+        .fan-blade { width: 200px; height: 25px; background: linear-gradient(to right, #bdc3c7, #7f8c8d); position: absolute; border-radius: 12px; }
         .spin { animation: spin 0.2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
         /* Electrical Panel */
-        .elec-box {
-            display: flex; gap: 15px; background: #bdc3c7; padding: 20px; border-radius: 5px; border: 3px solid #2c3e50;
-        }
-        .cb-switch {
-            width: 80px; height: 160px; background: #2f3640; border-radius: 4px; position: relative;
+        .elec-row { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-top: 20px;}
+        .cb-unit {
+            width: 100px; height: 180px; background: #2f3640; border-radius: 6px; position: relative;
             display: flex; flex-direction: column; align-items: center; border: 2px solid #555;
+            box-shadow: 5px 5px 10px rgba(0,0,0,0.3);
         }
-        .cb-lever {
-            width: 60px; height: 50px; background: var(--danger); margin-top: 30px; cursor: pointer;
-            border-radius: 3px; z-index: 10; display: flex; align-items: center; justify-content: center;
-            font-weight: bold; color: white; transition: 0.3s;
+        .cb-handle {
+            width: 70px; height: 60px; background: var(--danger); margin-top: 40px; cursor: pointer;
+            border-radius: 4px; z-index: 10; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: white; transition: 0.3s; border: 1px solid rgba(0,0,0,0.2);
         }
-        .cb-lever.off { transform: translateY(50px); background: var(--success); }
+        .cb-handle::after { content: "ON"; }
+        .cb-handle.off { transform: translateY(50px); background: var(--success); }
+        .cb-handle.off::after { content: "OFF"; }
+        
         .drop-zone { position: absolute; top:0; left:0; width:100%; height:100%; z-index: 5; }
 
-        /* Visuals */
-        .v-lock { position: absolute; top: 20px; left: 15px; font-size: 2.5rem; pointer-events: none; z-index: 20; filter: drop-shadow(2px 2px 2px black); }
-        .v-tag { position: absolute; top: 50px; left: 20px; font-size: 2rem; pointer-events: none; z-index: 21; filter: drop-shadow(2px 2px 2px black); transform: rotate(-10deg); }
+        /* Dropped Items */
+        .v-lock { position: absolute; top: 30px; left: 25px; font-size: 3rem; pointer-events: none; z-index: 20; filter: drop-shadow(3px 3px 3px black); }
+        .v-tag { position: absolute; top: 60px; left: 30px; font-size: 2.5rem; pointer-events: none; z-index: 21; filter: drop-shadow(3px 3px 3px black); transform: rotate(-10deg); }
 
         /* Toast */
         .toast {
-            position: fixed; bottom: 20px; right: 20px; 
-            background: #333; color: white; padding: 10px 20px; border-radius: 4px; border-left: 4px solid var(--primary);
-            transform: translateY(100px); transition: 0.3s; z-index: 3000;
+            position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 100px);
+            background: #333; color: white; padding: 12px 30px; border-radius: 30px; 
+            border: 2px solid var(--primary); font-weight: bold;
+            transition: 0.3s; z-index: 3000; opacity: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
-        .toast.show { transform: translateY(0); }
+        .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="app-title">LOTO Sim <span class="version-badge">v1.5</span></div>
-        <div class="user-display" id="header-user">Guest</div>
+        <div class="app-branding">
+            <button class="hamburger-btn" onclick="toggleSidebar()">
+                ☰
+            </button>
+            <div class="app-title">LOTO Sim <span class="version-badge">v1.6</span></div>
+        </div>
+        <div class="user-display" id="header-user">Khách</div>
     </div>
+
+    <div class="overlay-backdrop" id="backdrop" onclick="toggleSidebar()"></div>
 
     <div id="toast" class="toast">Hệ thống sẵn sàng</div>
 
-    <div id="login-screen" class="screen active" style="display: flex; align-items: center; justify-content: center;">
-        <div style="text-align: center; background: white; padding: 30px; border-radius: 8px; color: #333;">
-            <h2 style="margin-top:0;">ĐĂNG NHẬP</h2>
-            <button onclick="doLogin()" style="padding:10px 20px; background: #e74c3c; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold;">
-                Google Login
+    <div id="login-screen" class="screen active" style="display: flex; align-items: center; justify-content: center; background: #222;">
+        <div style="text-align: center; background: white; padding: 40px; border-radius: 10px; color: #333; max-width: 400px;">
+            <h1 style="margin-top:0; color: var(--primary);">ĐĂNG NHẬP</h1>
+            <p>Vui lòng đăng nhập để hệ thống xác định vai trò.</p>
+            <button onclick="doLogin()" style="padding:12px 30px; background: #e74c3c; color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);">
+                Đăng nhập Google
             </button>
-            <div style="margin-top:15px; font-size: 0.8rem; color: #888;">Giảng viên: deptc...</div>
+            <div style="margin-top:20px; font-size: 0.8rem; color: #888; border-top: 1px solid #eee; padding-top: 10px;">
+                Giảng viên test: deptc.gvatvsld@gmail.com
+            </div>
         </div>
     </div>
 
     <div id="instructor-screen" class="screen">
-        <div class="content-area" style="margin-left:0; padding: 60px 20px;">
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
-                <div class="panel">
-                    <h3 style="color:var(--primary); margin-top:0;">ĐIỀU KHIỂN</h3>
-                    <button class="menu-item active" style="border:1px solid #555; margin-bottom:5px;" onclick="forceStudent('view-device')">🏭 Đến Máy Móc</button>
-                    <button class="menu-item active" style="border:1px solid #555; margin-bottom:5px;" onclick="forceStudent('view-electrical')">⚡ Đến Tủ Điện</button>
-                    <button class="menu-item active" style="border:1px solid #555; margin-bottom:5px;" onclick="forceStudent('view-diagram')">🗺️ Đến Sơ Đồ</button>
-                    <hr style="border-color:#555">
-                    <button onclick="resetApp()" style="width:100%; padding:8px; background:var(--danger); border:none; color:white; cursor:pointer;">RESET APP</button>
+        <div class="content-area" style="padding: 20px;">
+            <div class="panel">
+                <h2 style="color:var(--primary); margin-top:0; border-bottom: 2px solid #555; padding-bottom: 10px;">BẢNG GIẢNG VIÊN</h2>
+                <div style="display:grid; gap: 10px;">
+                    <button class="menu-item" style="border:1px solid #555; background: #444;" onclick="forceStudent('view-device')">➡️ Chuyển HS đến: Máy Móc</button>
+                    <button class="menu-item" style="border:1px solid #555; background: #444;" onclick="forceStudent('view-electrical')">➡️ Chuyển HS đến: Tủ Điện</button>
+                    <button class="menu-item" style="border:1px solid #555; background: #444;" onclick="forceStudent('view-diagram')">➡️ Chuyển HS đến: Sơ Đồ</button>
+                    <button class="menu-item" style="border:1px solid #555; background: #444;" onclick="forceStudent('view-store')">➡️ Chuyển HS đến: Kho</button>
                 </div>
-                <div class="panel" id="inst-log" style="font-family: monospace; color: #00d2d3; max-height: 400px; overflow-y: auto;">
-                    > System initiated.<br>
+                <hr style="border-color:#555; margin: 20px 0;">
+                <button onclick="resetApp()" style="width:100%; padding:15px; background:var(--danger); border:none; color:white; cursor:pointer; font-weight:bold; border-radius: 5px;">RESET TOÀN BỘ</button>
+            </div>
+            
+            <div class="panel" style="max-height: 300px; overflow-y: auto;">
+                <h3 style="margin-top:0; color: var(--success);">NHẬT KÝ LỚP HỌC</h3>
+                <div id="inst-log" style="font-family: monospace; color: #00d2d3;">
+                    > Hệ thống khởi tạo thành công.<br>
                 </div>
             </div>
-            <button onclick="toggleRoles()" style="position:fixed; bottom:10px; left:10px; opacity:0.5;">Switch View</button>
         </div>
     </div>
 
     <div id="student-screen" class="screen">
         
-        <div class="sidebar">
-            <div class="sb-header">MENU ĐIỀU HƯỚNG</div>
+        <div class="sidebar" id="main-sidebar">
+            <div class="sb-header">KHU VỰC LÀM VIỆC</div>
             
             <button class="menu-item active" onclick="navTo('view-device')" id="btn-view-device">
-                <div class="menu-icon">🏭</div>
-                <div class="menu-label">Máy Móc (Device)</div>
+                <span class="menu-icon">🏭</span> Khu vực Máy (Device)
             </button>
 
             <button class="menu-item" onclick="navTo('view-electrical')" id="btn-view-electrical">
-                <div class="menu-icon">⚡</div>
-                <div class="menu-label">Tủ Điện (Panel)</div>
+                <span class="menu-icon">⚡</span> Tủ Điện (Panel)
             </button>
 
             <button class="menu-item" onclick="navTo('view-diagram')" id="btn-view-diagram">
-                <div class="menu-icon">🗺️</div>
-                <div class="menu-label">Sơ Đồ (Diagram)</div>
+                <span class="menu-icon">🗺️</span> Sơ Đồ (Diagram)
             </button>
 
             <button class="menu-item" onclick="navTo('view-store')" id="btn-view-store">
-                <div class="menu-icon">📦</div>
-                <div class="menu-label">Kho (Inventory)</div>
+                <span class="menu-icon">📦</span> Kho (Inventory)
             </button>
 
-            <div style="flex-grow:1"></div>
-
-            <div class="sb-header">DỤNG CỤ (KÉO THẢ)</div>
+            <div class="sb-header">DỤNG CỤ (KÉO THẢ RA NGOÀI)</div>
             
             <div class="menu-item tool-item" draggable="true" ondragstart="drag(event)" id="tool-lock">
-                <div class="menu-icon">🔒</div>
-                <div class="menu-label">Ổ Khóa</div>
+                <span class="menu-icon">🔒</span> Ổ Khóa An Toàn
             </div>
 
             <div class="menu-item tool-item" draggable="true" ondragstart="drag(event)" id="tool-tag">
-                <div class="menu-icon">🏷️</div>
-                <div class="menu-label">Thẻ Cảnh Báo</div>
+                <span class="menu-icon">🏷️</span> Thẻ Cảnh Báo
             </div>
 
             <div class="menu-item tool-item" draggable="true" ondragstart="drag(event)" id="tool-meter">
-                <div class="menu-icon">⚡</div>
-                <div class="menu-label">Đồng Hồ Đo</div>
+                <span class="menu-icon">⚡</span> Đồng Hồ VOM
             </div>
 
              <div class="menu-item tool-item" onclick="actionSpeaker()">
-                <div class="menu-icon">📢</div>
-                <div class="menu-label">Loa Thông Báo</div>
+                <span class="menu-icon">📢</span> Loa Thông Báo
             </div>
         </div>
 
         <div class="content-area">
             
             <div id="view-device" class="view-tab active">
-                <h2 style="border-bottom:2px solid var(--primary); width:100%;">MÁY QUẠT SỐ 02</h2>
-                <div class="fan-frame">
-                    <div class="fan-blade spin" id="fan"></div>
-                    <div class="fan-blade spin" style="transform: rotate(120deg);"></div>
-                    <div class="fan-blade spin" style="transform: rotate(240deg);"></div>
-                </div>
-                <div style="text-align: center;">
-                    <div id="st-machine" style="color:var(--success); font-weight:bold; font-size:1.2rem; margin-bottom:10px;">ĐANG CHẠY</div>
-                    <button onclick="setMachine(true)" style="padding:8px 20px; background:var(--success); border:none; color:white;">START</button>
-                    <button onclick="setMachine(false)" style="padding:8px 20px; background:var(--danger); border:none; color:white;">STOP</button>
+                <div class="panel" style="text-align: center;">
+                    <h2 style="color: var(--primary);">QUẠT CÔNG NGHIỆP SỐ 02</h2>
+                    <div class="fan-frame">
+                        <div class="fan-blade spin" id="fan"></div>
+                        <div class="fan-blade spin" style="transform: rotate(120deg);"></div>
+                        <div class="fan-blade spin" style="transform: rotate(240deg);"></div>
+                    </div>
+                    <div id="st-machine" style="font-size: 1.5rem; font-weight: bold; color: var(--success); margin: 20px 0;">ĐANG CHẠY</div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="setMachine(true)" style="padding: 10px 30px; background: var(--success); color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px;">START</button>
+                        <button onclick="setMachine(false)" style="padding: 10px 30px; background: var(--danger); color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px;">STOP</button>
+                    </div>
                 </div>
             </div>
 
             <div id="view-electrical" class="view-tab">
-                <h2 style="border-bottom:2px solid var(--primary); width:100%;">TỦ ĐIỆN DB-01</h2>
-                <div class="elec-box">
-                    <div class="cb-switch">
-                        <span style="font-size:0.7rem; margin-top:5px; color:#aaa">CB-1 (Light)</span>
-                        <div class="cb-lever" onclick="toggleCB(1, this)">ON</div>
-                        <div class="drop-zone" id="dz-1" ondragover="allow(event)" ondrop="drop(event, 1)"></div>
-                    </div>
-                    <div class="cb-switch" style="border-color: var(--primary);">
-                        <span style="font-size:0.7rem; margin-top:5px; color:var(--primary); font-weight:bold;">CB-2 (FAN)</span>
-                        <div class="cb-lever" id="lev-2" onclick="toggleCB(2, this)">ON</div>
-                        <div class="drop-zone" id="dz-2" ondragover="allow(event)" ondrop="drop(event, 2)"></div>
-                    </div>
-                    <div class="cb-switch">
-                        <span style="font-size:0.7rem; margin-top:5px; color:#aaa">CB-3 (Aux)</span>
-                        <div class="cb-lever" onclick="toggleCB(3, this)">ON</div>
-                        <div class="drop-zone" id="dz-3" ondragover="allow(event)" ondrop="drop(event, 3)"></div>
+                <div class="panel">
+                    <h2 style="color: var(--primary); text-align: center;">TỦ PHÂN PHỐI DB-01</h2>
+                    <p style="text-align: center; color: #aaa;">Kéo khóa/thẻ từ Menu (3 gạch) thả vào Aptomat</p>
+                    
+                    <div class="elec-row">
+                        <div class="cb-unit">
+                            <span style="font-size:0.8rem; margin-top:10px; color:#aaa">CB-1 (Light)</span>
+                            <div class="cb-handle" onclick="toggleCB(1, this)"></div>
+                            <div class="drop-zone" id="dz-1" ondragover="allow(event)" ondrop="drop(event, 1)"></div>
+                        </div>
+                        <div class="cb-unit" style="border-color: var(--primary);">
+                            <span style="font-size:0.8rem; margin-top:10px; color:var(--primary); font-weight:bold;">CB-2 (FAN)</span>
+                            <div class="cb-handle" id="lev-2" onclick="toggleCB(2, this)"></div>
+                            <div class="drop-zone" id="dz-2" ondragover="allow(event)" ondrop="drop(event, 2)"></div>
+                        </div>
+                        <div class="cb-unit">
+                            <span style="font-size:0.8rem; margin-top:10px; color:#aaa">CB-3 (Socket)</span>
+                            <div class="cb-handle" onclick="toggleCB(3, this)"></div>
+                            <div class="drop-zone" id="dz-3" ondragover="allow(event)" ondrop="drop(event, 3)"></div>
+                        </div>
                     </div>
                 </div>
-                <p style="margin-top:20px; color:#999; font-size:0.9rem;">*Gợi ý: Dùng Khóa và Thẻ trong menu bên trái.</p>
             </div>
 
             <div id="view-diagram" class="view-tab">
-                <h2 style="border-bottom:2px solid var(--primary); width:100%;">SƠ ĐỒ ĐIỆN</h2>
-                <div style="background:white; padding:20px; border-radius:5px;">
-                    <svg width="400" height="200" viewBox="0 0 400 200">
-                        <rect width="400" height="200" fill="white" />
+                <div class="panel" style="background: white; color: #333;">
+                    <h2 style="color: #333; text-align: center;">SƠ ĐỒ ĐƠN TUYẾN</h2>
+                    <svg width="100%" height="250" viewBox="0 0 500 250">
                         <text x="20" y="30" font-weight="bold">380V Main</text>
-                        <line x1="40" y1="40" x2="40" y2="180" stroke="red" stroke-width="4"/>
-                        <line x1="40" y1="100" x2="150" y2="100" stroke="black" stroke-width="2"/>
-                        <rect x="150" y="85" width="40" height="30" fill="none" stroke="blue" stroke-width="2"/>
-                        <text x="155" y="105" font-size="12" fill="blue">CB-2</text>
-                        <line x1="190" y1="100" x2="300" y2="100" stroke="black" stroke-width="2"/>
-                        <circle cx="320" cy="100" r="15" fill="#333"/>
-                        <text x="310" y="140" font-size="12" font-weight="bold">FAN</text>
+                        <line x1="40" y1="40" x2="40" y2="220" stroke="red" stroke-width="6"/>
+                        
+                        <line x1="40" y1="120" x2="180" y2="120" stroke="black" stroke-width="3"/>
+                        <rect x="180" y="100" width="60" height="40" fill="none" stroke="blue" stroke-width="3"/>
+                        <text x="190" y="125" font-size="14" fill="blue" font-weight="bold">CB-2</text>
+                        
+                        <line x1="240" y1="120" x2="380" y2="120" stroke="black" stroke-width="3"/>
+                        <circle cx="410" cy="120" r="25" fill="#333"/>
+                        <text x="385" y="170" font-size="14" font-weight="bold">MOTOR FAN</text>
                     </svg>
+                    <p style="text-align: center;"><strong>Xác nhận:</strong> CB-2 cấp nguồn cho Motor Quạt.</p>
                 </div>
             </div>
 
             <div id="view-store" class="view-tab">
-                <h2 style="border-bottom:2px solid var(--primary); width:100%;">KHO VẬT TƯ</h2>
-                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:15px; width:100%;">
-                    <div class="panel">🔒 KHÓA: 5</div>
-                    <div class="panel">🏷️ THẺ: 50</div>
-                    <div class="panel">⚡ ĐỒNG HỒ: OK</div>
-                    <div class="panel">🧤 GĂNG TAY: OK</div>
+                <div class="panel">
+                    <h2 style="color: var(--primary);">KHO VẬT TƯ</h2>
+                    <ul style="list-style: none; padding: 0; font-size: 1.2rem;">
+                        <li style="padding: 10px; border-bottom: 1px solid #555;">🔒 Ổ khóa an toàn: <strong>Sẵn sàng</strong></li>
+                        <li style="padding: 10px; border-bottom: 1px solid #555;">🏷️ Thẻ cảnh báo: <strong>Sẵn sàng</strong></li>
+                        <li style="padding: 10px; border-bottom: 1px solid #555;">⚡ Đồng hồ đo điện: <strong>Đã kiểm định</strong></li>
+                        <li style="padding: 10px;">🧤 Đồ bảo hộ PPE: <strong>Đủ size</strong></li>
+                    </ul>
                 </div>
             </div>
 
@@ -306,23 +337,31 @@
     </div>
 
     <script>
-        // INIT
+        // INIT FIREBASE
         const firebaseConfig = { apiKey: "AIzaSyCzWjfcD5Dgq7V-i2izb9tKLR6QM6qWPQo", authDomain: "tavietnam-78ae8.firebaseapp.com", projectId: "tavietnam-78ae8", storageBucket: "tavietnam-78ae8.firebasestorage.app", messagingSenderId: "670121705534", appId: "1:670121705534:web:1027ad98550573ad37116f" };
         firebase.initializeApp(firebaseConfig);
         
         let role = 'guest';
         let sys = { cb2: true, locked: false, tagged: false, running: true };
 
-        // LOGIN
+        // SIDEBAR TOGGLE LOGIC
+        function toggleSidebar() {
+            const sb = document.getElementById('main-sidebar');
+            const bd = document.getElementById('backdrop');
+            sb.classList.toggle('open');
+            bd.classList.toggle('show');
+        }
+
+        // LOGIN LOGIC
         function doLogin() {
             const p = new firebase.auth.GoogleAuthProvider();
             firebase.auth().signInWithPopup(p).then(r => setRole(r.user)).catch(e => {
+                // Fallback test
                 if(location.protocol==='file:') setRole({email: prompt("Test Email:", "deptc.gvatvsld@gmail.com")});
             });
         }
         function setRole(u) {
             document.getElementById('login-screen').classList.remove('active');
-            // Shorten email: deptc.gvatvsld@gmail.com -> deptc.gvatvsld
             const shortName = u.email.split('@')[0];
             document.getElementById('header-user').innerText = shortName;
 
@@ -332,30 +371,37 @@
             } else {
                 role = 'student';
                 document.getElementById('student-screen').classList.add('active');
+                msg("Chào mừng " + shortName);
             }
         }
 
-        // NAVIGATION
+        // NAVIGATION LOGIC
         function navTo(viewId) {
-            // Hide all tabs
+            // 1. Ẩn tất cả view
             document.querySelectorAll('.view-tab').forEach(el => el.classList.remove('active'));
-            // Show target
+            // 2. Hiện view mục tiêu
             document.getElementById(viewId).classList.add('active');
             
-            // Sidebar Active State
+            // 3. Update trạng thái active trong menu
             document.querySelectorAll('.menu-item').forEach(b => b.classList.remove('active'));
             const btnId = 'btn-' + viewId;
             if(document.getElementById(btnId)) document.getElementById(btnId).classList.add('active');
             
-            msg(`Chuyển đến: ${viewId.replace('view-','')}`);
+            // 4. QUAN TRỌNG: Đóng sidebar ngay lập tức để người dùng thấy thay đổi
+            const sb = document.getElementById('main-sidebar');
+            if(sb.classList.contains('open')) toggleSidebar();
+
+            msg(`Đã chuyển đến: ${viewId.replace('view-','').toUpperCase()}`);
         }
 
         function forceStudent(viewId) {
-            navTo(viewId); // Local sim
-            msg("Giảng viên yêu cầu chuyển màn hình.");
+            // Logic giả lập realtime: Instructor bấm -> Student chuyển view
+            // Trong thực tế cần Firebase Realtime Database. Ở đây ta giả lập chạy trên máy instructor
+            navTo(viewId); 
+            msg("Giảng viên đã đổi màn hình.");
         }
 
-        // ACTIONS
+        // SIMULATION LOGIC
         function setMachine(run) {
             if(run && sys.cb2) {
                 sys.running = true;
@@ -371,13 +417,13 @@
         }
 
         function toggleCB(id, el) {
-            if(id === 2 && sys.locked) { msg("⛔ Đã khóa LOTO!"); return; }
+            if(id === 2 && sys.locked) { msg("⛔ Đã khóa LOTO! Không thể thao tác."); return; }
             
             if(el.classList.contains('off')) {
-                el.classList.remove('off'); el.innerText = "ON";
+                el.classList.remove('off'); 
                 if(id === 2) { sys.cb2 = true; setMachine(true); }
             } else {
-                el.classList.add('off'); el.innerText = "OFF";
+                el.classList.add('off'); 
                 if(id === 2) { sys.cb2 = false; setMachine(false); }
             }
         }
@@ -392,11 +438,11 @@
             
             if(t==='tool-lock') {
                 if(id!==2) { msg("⚠️ Sai CB!"); return; }
-                if(sys.cb2) { msg("⚡ Còn điện!"); return; }
+                if(sys.cb2) { msg("⚡ Còn điện! Cắt CB trước."); return; }
                 if(!sys.locked) {
                     sys.locked = true;
                     z.innerHTML += `<div class="v-lock">🔒</div>`;
-                    msg("✅ Đã khóa.");
+                    msg("✅ Đã khóa an toàn.");
                     log("User locked CB2");
                 }
             } else if(t==='tool-tag') {
@@ -404,14 +450,20 @@
                     sys.tagged = true;
                     z.innerHTML += `<div class="v-tag">🏷️</div>`;
                     msg("✅ Đã treo thẻ.");
-                } else msg("⚠️ Chưa khóa!");
+                } else if (!sys.locked) msg("⚠️ Phải khóa trước!");
             } else if(t==='tool-meter') {
                 msg("⏳ Đang đo...");
-                setTimeout(() => msg((id===2 && sys.cb2) ? "⚡ 380V" : "✅ 0V"), 1000);
+                setTimeout(() => msg((id===2 && sys.cb2) ? "⚡ 380V (NGUY HIỂM)" : "✅ 0V (AN TOÀN)"), 1000);
             }
         }
 
-        function actionSpeaker() { msg("📢 Đã thông báo."); log("User announced."); }
+        function actionSpeaker() { 
+            msg("📢 Đã phát loa thông báo toàn xưởng."); 
+            log("User announced via speaker."); 
+            // Đóng sidebar nếu đang dùng speaker từ menu
+            const sb = document.getElementById('main-sidebar');
+            if(sb.classList.contains('open')) toggleSidebar();
+        }
 
         // UTILS
         function msg(txt) {
@@ -424,12 +476,6 @@
             if(l) l.innerHTML += `<div>> ${txt}</div>`;
         }
         function resetApp() { location.reload(); }
-        function toggleRoles() {
-            const inst = document.getElementById('instructor-screen');
-            const stu = document.getElementById('student-screen');
-            if(inst.classList.contains('active')) { inst.classList.remove('active'); stu.classList.add('active'); }
-            else { stu.classList.remove('active'); inst.classList.add('active'); }
-        }
 
     </script>
 </body>

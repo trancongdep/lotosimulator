@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LOTO Mobile v1.13</title>
+    <title>LOTO Mobile v1.14</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -75,7 +75,7 @@
         .tab-view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100%; }
         .tab-view.show { display: flex; }
 
-        .card { background: #353b48; border-radius: 12px; padding: 20px; width: 100%; box-sizing: border-box; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; }
+        .card { background: #353b48; border-radius: 12px; padding: 20px; width: 100%; box-sizing: border-box; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; position: relative; z-index: 1;}
 
         /* --- DEVICE VISUALS --- */
         .fan-frame {
@@ -106,22 +106,34 @@
         .cb-lever.off { transform: translateY(50px); background: var(--success); }
         
         /* Items Visualization */
-        .vis-lock { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 2.5rem; z-index: 5; pointer-events: none; }
-        .vis-hasp { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 2.8rem; z-index: 5; pointer-events: none; filter: drop-shadow(0 0 5px orange); }
-        .vis-tag { position: absolute; top: 50px; left: 50%; transform: translateX(-50%) rotate(-10deg); font-size: 2rem; z-index: 6; pointer-events: none; }
+        .lock-container { position: absolute; top: 10px; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        .vis-hasp { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 3rem; z-index: 6; filter: drop-shadow(0 0 3px orange); }
+        
+        /* Multiple Locks Stacked */
+        .vis-lock { position: absolute; left: 50%; transform: translateX(-50%); font-size: 2rem; z-index: 7; filter: drop-shadow(2px 2px 2px black); }
+        .lock-1 { top: 40px; margin-left: -10px; }
+        .lock-2 { top: 50px; margin-left: 10px; color: yellow; }
+        .lock-3 { top: 60px; margin-left: -5px; color: cyan; }
 
-        /* --- WORKER ANIMATION --- */
+        .vis-tag { position: absolute; top: 70px; left: 50%; transform: translateX(-50%) rotate(-10deg); font-size: 2rem; z-index: 8; filter: drop-shadow(0 4px 4px #000); }
+
+        /* --- WORKER ANIMATION (LAYER FIX) --- */
         .worker-container {
             position: absolute; 
-            bottom: 140px; /* Nâng cao lên để không đè nút */
-            left: -100px; 
-            z-index: 5; /* Thấp hơn Controls (z-index 100) nhưng cao hơn nền */
-            transition: transform 2s linear;
-            pointer-events: none; /* Không chặn click chuột vào máy */
+            /* Vị trí ban đầu: Đứng ngay cạnh thiết bị */
+            bottom: 200px; 
+            left: 20px; 
+            /* Z-Index rất cao để đè lên mọi thiết bị */
+            z-index: 200; 
+            transition: transform 3s linear;
+            pointer-events: none; /* Cho phép bấm xuyên qua */
         }
-        .worker-svg { width: 90px; height: 140px; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
-        .worker-walk-in { transform: translateX(160px); }
+        .worker-svg { width: 100px; height: 150px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.8)); }
         
+        /* Animation states */
+        .worker-walk-out { transform: translateX(400px); opacity: 0; } /* Đi ra */
+        .worker-walk-in { transform: translateX(120px); } /* Đi vào sửa máy */
+
         .shocked { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) infinite; }
         .shocked .worker-body { fill: #e74c3c !important; }
 
@@ -139,7 +151,7 @@
         }
         @keyframes flash { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
 
-        /* --- ACTIVE TOOL HUD --- */
+        /* --- HUD & OVERLAYS --- */
         #active-tool-hud {
             position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.9); border: 2px solid var(--primary);
@@ -151,7 +163,6 @@
         .hud-close { background: #e74c3c; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; cursor: pointer; }
         @keyframes bounceIn { from { transform: translateX(-50%) scale(0.5); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 
-        /* --- RESET OVERLAY --- */
         #reset-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 9999;
@@ -165,7 +176,6 @@
         }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
-        /* Toast & Logs */
         .toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
             background: rgba(50, 50, 50, 0.95); color: white; padding: 12px 20px; 
@@ -173,6 +183,7 @@
             opacity: 0; pointer-events: none; transition: 0.3s; z-index: 5000;
         }
         .toast.show { opacity: 1; bottom: 40px; }
+
         .log-panel {
             background: #000; color: #0f0; font-family: monospace; font-size: 0.8rem;
             padding: 10px; height: 200px; overflow-y: auto; border-radius: 5px;
@@ -197,7 +208,7 @@
             <button id="btn-menu" onclick="toggleSidebar()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
             </button>
-            <div class="app-title">LOTO Mobile v1.13</div>
+            <div class="app-title">LOTO Mobile v1.14</div>
         </div>
         <div class="user-info" id="user-display">Guest</div>
     </div>
@@ -227,8 +238,8 @@
 
         <div class="menu-group">
             <div class="menu-header">Dụng Cụ</div>
-            <div class="menu-item" onclick="selectTool('lock')"><span class="tool-icon">🔒</span> Ổ Khóa</div>
             <div class="menu-item" onclick="selectTool('hasp')"><span class="tool-icon">🔗</span> Khóa Kéo Dài</div>
+            <div class="menu-item" onclick="selectTool('lock')"><span class="tool-icon">🔒</span> Ổ Khóa</div>
             <div class="menu-item" onclick="selectTool('tag')"><span class="tool-icon">🏷️</span> Thẻ Cảnh Báo</div>
             <div class="menu-item" onclick="selectTool('keybox')"><span class="tool-icon">🗃️</span> Hộp Key Box</div>
             <div class="menu-item" onclick="selectTool('meter')"><span class="tool-icon">⚡</span> Đồng Hồ VOM</div>
@@ -248,10 +259,14 @@
                 <svg class="worker-svg" viewBox="0 0 100 200">
                     <circle cx="50" cy="30" r="20" fill="#f1c40f" stroke="#333" stroke-width="2"/>
                     <rect class="worker-body" x="25" y="50" width="50" height="80" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
-                    <line x1="25" y1="60" x2="10" y2="100" stroke="#f39c12" stroke-width="8" stroke-linecap="round"/> <line x1="75" y1="60" x2="90" y2="100" stroke="#f39c12" stroke-width="8" stroke-linecap="round"/> <line x1="35" y1="130" x2="35" y2="190" stroke="#333" stroke-width="10" stroke-linecap="round"/> <line x1="65" y1="130" x2="65" y2="190" stroke="#333" stroke-width="10" stroke-linecap="round"/> </svg>
+                    <line x1="25" y1="60" x2="10" y2="100" stroke="#f39c12" stroke-width="8" stroke-linecap="round"/>
+                    <line x1="75" y1="60" x2="90" y2="100" stroke="#f39c12" stroke-width="8" stroke-linecap="round"/>
+                    <line x1="35" y1="130" x2="35" y2="190" stroke="#333" stroke-width="10" stroke-linecap="round"/>
+                    <line x1="65" y1="130" x2="65" y2="190" stroke="#333" stroke-width="10" stroke-linecap="round"/>
+                </svg>
             </div>
 
-            <div class="card" onclick="handleTapMachine()" style="position: relative; z-index: 10;">
+            <div class="card" onclick="handleTapMachine()" style="position: relative; z-index: 1;">
                 <h3 style="margin:0; color:var(--primary)">QUẠT SỐ 02</h3>
                 <div class="fan-frame">
                     <div class="blade spin" id="blade1"></div>
@@ -282,7 +297,8 @@
                     <div class="cb-unit" style="border-color:var(--primary);">
                         <span style="font-size:0.7rem; margin-top:5px; color:var(--primary); font-weight:bold;">FAN</span>
                         <div class="cb-lever" id="cb2-lever">ON</div>
-                        <div id="cb2-lock-viz"></div>
+                        <div class="lock-container" id="cb2-locks">
+                            </div>
                         <div id="cb2-tag-viz"></div>
                         <div class="cb-touch-area" onclick="handleTapCB(2)"></div>
                     </div>
@@ -300,47 +316,23 @@
                 <h3 style="text-align: center;">SƠ ĐỒ ĐƠN TUYẾN DB-01</h3>
                 <svg width="100%" height="250" viewBox="0 0 350 250">
                     <defs>
-                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto">
-                          <path d="M0,0 L0,6 L9,3 z" fill="#333" />
-                        </marker>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#333" /></marker>
                     </defs>
-                    
                     <text x="10" y="20" font-weight="bold" font-size="14">BUSBAR 380V</text>
                     <line x1="20" y1="30" x2="20" y2="230" stroke="red" stroke-width="6"/>
-
-                    <path d="M23 50 L100 50" stroke="black" stroke-width="2" fill="none"/>
-                    <rect x="100" y="40" width="30" height="20" stroke="black" fill="none"/>
-                    <text x="105" y="55" font-size="10">CB1</text>
-                    <line x1="130" y1="50" x2="280" y2="50" stroke="black" stroke-width="2"/>
-                    <circle cx="290" cy="50" r="8" stroke="black" fill="yellow"/>
-                    <text x="305" y="55" font-size="12">Light</text>
-
                     <path d="M23 110 L80 110" stroke="black" stroke-width="2" fill="none"/>
                     <rect x="80" y="100" width="40" height="20" stroke="blue" stroke-width="3" fill="none"/>
                     <text x="85" y="115" font-size="10" fill="blue" font-weight="bold">CB-2</text>
-                    
                     <path d="M120 110 L160 110" stroke="black" stroke-width="2"/>
                     <rect x="160" y="100" width="30" height="20" stroke="#555" fill="#ddd"/>
-                    <text x="162" y="115" font-size="8">KM2</text> <path d="M190 110 L220 110" stroke="black" stroke-width="2"/>
+                    <text x="162" y="115" font-size="8">KM2</text> 
+                    <path d="M190 110 L220 110" stroke="black" stroke-width="2"/>
                     <rect x="220" y="100" width="30" height="20" stroke="#555" fill="#ddd"/>
-                    <text x="222" y="115" font-size="8">OL</text> <line x1="250" y1="110" x2="280" y2="110" stroke="black" stroke-width="2" marker-end="url(#arrow)"/>
+                    <text x="222" y="115" font-size="8">OL</text>
+                    <line x1="250" y1="110" x2="280" y2="110" stroke="black" stroke-width="2" marker-end="url(#arrow)"/>
                     <circle cx="295" cy="110" r="15" fill="#333"/>
                     <text x="280" y="140" font-size="12" font-weight="bold">M2 (QUẠT)</text>
-
-                    <path d="M23 180 L100 180" stroke="black" stroke-width="2" fill="none"/>
-                    <rect x="100" y="170" width="30" height="20" stroke="black" fill="none"/>
-                    <text x="105" y="185" font-size="10">CB3</text>
-                    <text x="150" y="185" font-size="12">Ổ cắm</text>
                 </svg>
-                <div style="background: #eee; padding: 10px; font-size: 0.85rem; border-radius: 4px;">
-                    <strong>Yêu cầu:</strong> Xác định đúng CB cấp nguồn cho Động cơ Quạt (M2).
-                </div>
-            </div>
-
-            <div class="card" style="text-align: left;">
-                <h3>KHO DỤNG CỤ</h3>
-                <p>🔒 Ổ khóa: 5 | 🏷️ Thẻ: 50 | 🔗 Hasp: 3 | 🗃️ KeyBox: 1</p>
-                <small>Dùng menu bên trái để lấy dụng cụ</small>
             </div>
         </div>
 
@@ -361,8 +353,14 @@
 
         // STATE
         let currentTool = null;
-        let sys = { cb2: true, cb2_locked: false, cb2_tagged: false };
+        let sys = { 
+            cb2: true, 
+            has_hasp: false, // Trạng thái có Hasp hay chưa
+            lock_count: 0,   // Số lượng khóa trên Hasp
+            tagged: false 
+        };
         let userName = "Guest";
+        let workerPresent = true;
 
         // AUTH
         function doLogin() {
@@ -380,7 +378,7 @@
             if(u.email === 'deptc.gvatvsld@gmail.com') document.getElementById('menu-instructor').style.display = 'block';
         }
 
-        // NAVIGATION & UI
+        // NAVIGATION
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); document.getElementById('backdrop').classList.toggle('show'); }
         function closeSidebar() { document.getElementById('sidebar').classList.remove('active'); document.getElementById('backdrop').classList.remove('show'); }
         function nav(tabId) {
@@ -421,29 +419,57 @@
 
         function handleTapCB(id) {
             if (id === 2) {
-                if (currentTool === 'lock' || currentTool === 'hasp') {
-                    if(sys.cb2) { showToast("⚡ Còn điện!"); logAction("Lỗi: Khóa khi còn điện"); return; }
+                const vizContainer = document.getElementById('cb2-locks');
+                
+                // --- CASE: HASP ---
+                if (currentTool === 'hasp') {
+                    if(sys.cb2) { showToast("⚡ Còn điện!"); logAction("Lỗi: Kẹp Hasp khi còn điện"); return; }
+                    if(sys.has_hasp) { showToast("Đã kẹp Hasp rồi!"); return; }
                     
-                    sys.cb2_locked = true;
-                    let icon = currentTool === 'hasp' ? '<div class="vis-hasp">🔗</div>' : '<div class="vis-lock">🔒</div>';
-                    document.getElementById('cb2-lock-viz').innerHTML = icon;
-                    
-                    logAction(`Đã khóa CB-2 (${currentTool === 'hasp' ? 'Hasp' : 'Lock'})`); 
+                    sys.has_hasp = true;
+                    updateLockVisuals();
+                    logAction("Đã kẹp khóa kéo dài (Hasp)");
                     clearTool();
-                } else if (currentTool === 'tag') {
-                    if(!sys.cb2_locked) { showToast("⚠️ Khóa trước!"); return; }
-                    sys.cb2_tagged = true;
+                } 
+                // --- CASE: LOCK ---
+                else if (currentTool === 'lock') {
+                    if(sys.cb2) { showToast("⚡ Còn điện!"); return; }
+                    
+                    // Logic: Nếu chưa có Hasp, móc khóa đơn. Nếu có Hasp, móc thêm khóa vào Hasp.
+                    if (sys.has_hasp) {
+                         sys.lock_count++;
+                         updateLockVisuals();
+                         logAction(`Đã thêm ổ khóa số ${sys.lock_count} vào Hasp`);
+                         showToast(`Đã thêm khóa (${sys.lock_count})`);
+                         clearTool(); // Auto clear or keep adding? Let's clear for simplicity
+                    } else {
+                        // Single lock mode (No Hasp)
+                        if(sys.lock_count > 0) { showToast("Đã có khóa đơn rồi"); return; }
+                        sys.lock_count = 1;
+                        updateLockVisuals();
+                        logAction("Đã khóa an toàn (Khóa đơn)");
+                        clearTool();
+                    }
+                } 
+                // --- CASE: TAG ---
+                else if (currentTool === 'tag') {
+                    if(sys.lock_count === 0) { showToast("⚠️ Khóa trước!"); return; }
+                    sys.tagged = true;
                     document.getElementById('cb2-tag-viz').innerHTML = '<div class="vis-tag">🏷️</div>';
-                    logAction("Đã treo thẻ CB-2"); clearTool();
-                } else if (currentTool === 'meter') {
+                    logAction("Đã treo thẻ"); clearTool();
+                } 
+                // --- CASE: METER ---
+                else if (currentTool === 'meter') {
                     showToast("⏳ Đang đo...");
                     setTimeout(() => {
                         const res = sys.cb2 ? "380V" : "0V";
                         showToast(`Kết quả: ${res}`);
-                        logAction(`Đo điện áp CB-2: ${res}`);
+                        logAction(`Đo điện áp: ${res}`);
                     }, 1000);
-                } else if (!currentTool) {
-                    if(sys.cb2_locked) { showToast("⛔ Đã khóa!"); return; }
+                } 
+                // --- CASE: TOGGLE SWITCH ---
+                else if (!currentTool) {
+                    if(sys.lock_count > 0 || sys.has_hasp) { showToast("⛔ Đã khóa LOTO!"); return; }
                     sys.cb2 = !sys.cb2;
                     toggleMachine(sys.cb2);
                     const el = document.getElementById('cb2-lever');
@@ -458,85 +484,111 @@
             }
         }
         
+        function updateLockVisuals() {
+            const container = document.getElementById('cb2-locks');
+            let html = '';
+            
+            // Render Hasp if present
+            if(sys.has_hasp) {
+                html += '<div class="vis-hasp">🔗</div>';
+            }
+            
+            // Render Locks on top
+            if(sys.lock_count > 0) {
+                 // Nếu có hasp, render nhiều khóa chồng lên
+                 if(sys.has_hasp) {
+                     if(sys.lock_count >= 1) html += '<div class="vis-lock lock-1">🔒</div>';
+                     if(sys.lock_count >= 2) html += '<div class="vis-lock lock-2">🔒</div>';
+                     if(sys.lock_count >= 3) html += '<div class="vis-lock lock-3">🔒</div>';
+                 } else {
+                     // Khóa đơn
+                     html += '<div class="vis-lock">🔒</div>';
+                 }
+            }
+            container.innerHTML = html;
+        }
+
         function handleTapMachine() {
             if(currentTool === 'speaker') {
                 logAction("Phát loa thông báo");
                 showToast("📢 Đã thông báo");
+                speak("Chú ý! Chuẩn bị cắt điện máy số 2.");
+                
+                // Worker leaves
+                if(workerPresent) {
+                    setTimeout(() => {
+                        document.getElementById('worker-npc').classList.add('worker-walk-out');
+                        workerPresent = false;
+                        logAction("Công nhân đã rời đi");
+                    }, 2000);
+                }
                 clearTool();
-            } else if (currentTool === 'keybox') {
-                 showToast("Đã đặt Key Box");
-                 logAction("Đặt Key Box");
-                 clearTool();
             }
         }
 
-        // ACCIDENT & SOFT RESET
         function handlePermit() {
             logAction("Cấp phép làm việc");
             const worker = document.getElementById('worker-npc');
             const svg = worker.querySelector('.worker-svg');
             
-            // Start Animation
             worker.className = 'worker-container'; 
             svg.classList.remove('shocked');
             setTimeout(() => worker.classList.add('worker-walk-in'), 100);
 
-            // Trigger Result
             setTimeout(() => {
                 let unsafe = false;
                 if(sys.cb2) unsafe = true;
-                if(!sys.cb2_locked) unsafe = true;
+                if(sys.lock_count === 0) unsafe = true; // Must have at least 1 lock
 
                 if(unsafe) {
                     svg.classList.add('shocked');
                     document.getElementById('shock-flash').style.display = 'block';
                     logAction("TAI NẠN: ĐIỆN GIẬT", true);
-                    showToast("⚡ TAI NẠN ĐIỆN GIẬT! ⚡");
+                    showToast("⚡ TAI NẠN!");
                     
-                    // Delay then show Soft Reset Button
                     setTimeout(() => {
                          document.getElementById('shock-flash').style.display = 'none';
                          document.getElementById('reset-overlay').style.display = 'flex';
                     }, 10000);
                 } else {
-                    logAction("Bắt đầu sửa chữa (An toàn)", false);
-                    showToast("✅ An toàn. Đang sửa chữa...");
+                    logAction("An toàn. Bắt đầu sửa chữa.", false);
+                    showToast("✅ An toàn.");
                 }
             }, 1500);
         }
 
         function resetSimulation() {
-            // Soft Reset Logic: Reset state without reloading page
-            sys = { cb2: true, cb2_locked: false, cb2_tagged: false };
-            
-            // Reset UI Visuals
-            document.getElementById('cb2-lock-viz').innerHTML = '';
+            sys = { cb2: true, has_hasp: false, lock_count: 0, tagged: false };
+            updateLockVisuals();
             document.getElementById('cb2-tag-viz').innerHTML = '';
             
-            // Reset CB Lever UI
             const el = document.getElementById('cb2-lever');
             el.classList.remove('off'); el.innerText = "ON";
-            
-            // Reset Machine
             toggleMachine(true);
 
-            // Reset Worker
+            // Reset worker
+            workerPresent = true;
             const worker = document.getElementById('worker-npc');
             const svg = worker.querySelector('.worker-svg');
             worker.className = 'worker-container';
             svg.classList.remove('shocked');
 
-            // Hide Overlays
             document.getElementById('reset-overlay').style.display = 'none';
             document.getElementById('shock-flash').style.display = 'none';
             
-            // Log reset
-            logAction("--- RESET BÀI TẬP ---");
-            nav('tab-device'); // Back to start
-            showToast("Đã làm mới bài tập");
+            nav('tab-device');
+            logAction("--- SOFT RESET ---");
+            showToast("Đã làm mới");
         }
 
-        // UTILS
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'vi-VN';
+                speechSynthesis.speak(u);
+            }
+        }
+
         function logAction(action, isDanger = false) {
             const container = document.getElementById('log-container');
             const time = new Date().toLocaleTimeString();

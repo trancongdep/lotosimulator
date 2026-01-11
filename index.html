@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LOTO Mobile v1.10</title>
+    <title>LOTO Mobile v1.11</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -14,6 +14,7 @@
             --primary: #00a8ff;
             --danger: #e84118;
             --success: #4cd137;
+            --warning: #f1c40f;
             --text: #f5f6fa;
             --sidebar-w: 80%; 
             --header-h: 56px;
@@ -43,7 +44,6 @@
         }
 
         .app-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
-        .user-info { font-size: 0.8rem; color: #ccc; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* --- SIDEBAR --- */
         .sidebar {
@@ -56,24 +56,18 @@
         .sidebar.active { left: 0; }
 
         .menu-group { border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .menu-header {
-            padding: 15px 20px 5px; font-size: 0.75rem; color: #7f8c8d; 
-            text-transform: uppercase; font-weight: bold;
-        }
+        .menu-header { padding: 15px 20px 5px; font-size: 0.75rem; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
         .menu-item {
             padding: 15px 20px; display: flex; align-items: center; gap: 15px;
-            color: #ecf0f1; border-bottom: 1px solid #2f3640; cursor: pointer;
-            font-size: 1rem;
+            color: #ecf0f1; border-bottom: 1px solid #2f3640; cursor: pointer; font-size: 1rem;
         }
         .menu-item:active { background: rgba(255,255,255,0.1); }
         .menu-item.active { background: rgba(0,168,255,0.15); border-left: 5px solid var(--primary); color: white; }
         .tool-icon { font-size: 1.4rem; width: 30px; text-align: center; }
 
-        /* Backdrop */
         .backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); z-index: 2500; display: none;
-            backdrop-filter: blur(2px);
+            background: rgba(0,0,0,0.7); z-index: 2500; display: none; backdrop-filter: blur(2px);
         }
         .backdrop.show { display: block; }
 
@@ -83,33 +77,22 @@
             background: rgba(0, 0, 0, 0.9); border: 2px solid var(--primary);
             padding: 10px 20px; border-radius: 50px;
             display: none; align-items: center; gap: 10px;
-            z-index: 1500; box-shadow: 0 5px 20px rgba(0,168,255,0.4);
-            animation: bounceIn 0.3s;
+            z-index: 1500; animation: bounceIn 0.3s;
         }
         #active-tool-hud.show { display: flex; }
         .hud-icon { font-size: 1.5rem; }
         .hud-text { font-size: 0.9rem; font-weight: bold; color: white; }
-        .hud-close { 
-            background: #e74c3c; width: 25px; height: 25px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; cursor: pointer;
-        }
+        .hud-close { background: #e74c3c; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; cursor: pointer; }
         @keyframes bounceIn { from { transform: translateX(-50%) scale(0.5); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 
         /* --- CONTENT --- */
-        .main-content {
-            margin-top: var(--header-h); height: calc(100vh - var(--header-h));
-            overflow-y: auto; background: #2f3640; position: relative;
-        }
+        .main-content { margin-top: var(--header-h); height: calc(100vh - var(--header-h)); overflow-y: auto; background: #2f3640; position: relative; }
         .tab-view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100%; }
         .tab-view.show { display: flex; }
 
-        /* --- VISUALS --- */
-        .card {
-            background: #353b48; border-radius: 12px; padding: 20px; width: 100%; box-sizing: border-box;
-            margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center;
-        }
+        .card { background: #353b48; border-radius: 12px; padding: 20px; width: 100%; box-sizing: border-box; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; }
 
-        /* Machine Fan */
+        /* --- DEVICE VISUALS --- */
         .fan-frame {
             width: 180px; height: 180px; border: 8px solid #7f8c8d; border-radius: 50%;
             background: #222; margin: 20px auto; position: relative; display: flex; align-items: center; justify-content: center;
@@ -118,38 +101,53 @@
         .spin { animation: spin 0.2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Electrical Grid */
+        /* Control Buttons Layout */
+        .controls-row { display: flex; gap: 15px; justify-content: center; width: 100%; margin-bottom: 15px; }
+        .btn { padding: 15px 25px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 1rem; flex: 1; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.3); }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+        .btn-success { background: var(--success); color: #2f3640; }
+        .btn-danger { background: var(--danger); }
+        .btn-permit { background: var(--warning); color: #2f3640; width: 100%; font-size: 1.1rem; border: 2px solid #f39c12; }
+
+        /* --- ELECTRICAL VISUALS --- */
         .panel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
-        .cb-unit {
-            background: #2f3640; border: 2px solid #555; border-radius: 8px; height: 160px;
-            position: relative; display: flex; flex-direction: column; align-items: center;
-        }
+        .cb-unit { background: #2f3640; border: 2px solid #555; border-radius: 8px; height: 160px; position: relative; display: flex; flex-direction: column; align-items: center; }
         .cb-touch-area { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
-        .cb-lever {
-            width: 50px; height: 40px; background: var(--danger); margin-top: 30px; border-radius: 4px;
-            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; transition: 0.3s;
-        }
+        .cb-lever { width: 50px; height: 40px; background: var(--danger); margin-top: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; transition: 0.3s; }
         .cb-lever.off { transform: translateY(50px); background: var(--success); }
         .vis-lock { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 2.5rem; z-index: 5; pointer-events: none; }
         .vis-tag { position: absolute; top: 50px; left: 50%; transform: translateX(-50%) rotate(-10deg); font-size: 2rem; z-index: 6; pointer-events: none; }
 
-        /* WORKER ANIMATION */
+        /* --- WORKER ANIMATION (ACCIDENT) --- */
         .worker-container {
-            position: absolute; bottom: 80px; left: 20px; z-index: 50;
-            transition: transform 3s ease-in-out, opacity 3s;
+            position: absolute; bottom: 80px; left: -100px; /* Start outside */
+            z-index: 50; transition: transform 2s linear;
         }
         .worker-svg { width: 80px; height: 120px; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
         
-        .worker-leave {
-            transform: translateX(300px); /* Move right out of screen */
-            opacity: 0;
+        .worker-walk-in { transform: translateX(150px); } /* Walk to center */
+        
+        /* Shock Effect */
+        .shocked {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) infinite;
+        }
+        .shocked .worker-body { fill: #e74c3c !important; } /* Turn red */
+        
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0) rotate(-5deg); }
+            20%, 80% { transform: translate3d(4px, 0, 0) rotate(5deg); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0) rotate(-5deg); }
+            40%, 60% { transform: translate3d(6px, 0, 0) rotate(5deg); }
         }
 
-        /* Buttons & Toast */
-        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 1rem; width: 100%; margin-top: 10px; }
-        .btn-success { background: var(--success); color: #2f3640; }
-        .btn-danger { background: var(--danger); }
-        
+        #shock-flash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.5); z-index: 9000; display: none;
+            animation: flash 0.1s infinite;
+        }
+        @keyframes flash { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* Toast & Logs */
         .toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
             background: rgba(50, 50, 50, 0.95); color: white; padding: 12px 20px; 
@@ -158,16 +156,30 @@
         }
         .toast.show { opacity: 1; bottom: 40px; }
 
+        /* INSTRUCTOR LOG PANEL */
+        .log-panel {
+            background: #000; color: #0f0; font-family: monospace; font-size: 0.8rem;
+            padding: 10px; height: 200px; overflow-y: auto; border-radius: 5px;
+            margin-top: 10px; border: 1px solid #333; text-align: left;
+        }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px dashed #333; padding-bottom: 2px; }
+        .log-time { color: #888; }
+        .log-user { color: var(--primary); font-weight: bold; }
+        .log-action { color: #ecf0f1; }
+        .log-danger { color: #e74c3c; font-weight: bold; }
+
     </style>
 </head>
 <body>
+
+    <div id="shock-flash"></div>
 
     <div class="header">
         <div style="display: flex; align-items: center;">
             <button id="btn-menu" onclick="toggleSidebar()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
             </button>
-            <div class="app-title">LOTO Mobile v1.10</div>
+            <div class="app-title">LOTO Mobile v1.11</div>
         </div>
         <div class="user-info" id="user-display">Guest</div>
     </div>
@@ -177,7 +189,6 @@
         <div class="hud-text" id="hud-text">...</div>
         <div class="hud-close" onclick="clearTool()">✕</div>
     </div>
-
     <div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
     <div id="toast" class="toast">Hệ thống sẵn sàng</div>
 
@@ -190,38 +201,38 @@
 
     <div class="sidebar" id="sidebar">
         <div class="menu-group">
-            <div class="menu-header">Khu Vực (Navigation)</div>
-            <div class="menu-item active" onclick="nav('tab-device')" id="nav-device">
-                <span class="tool-icon">🏭</span> Máy Móc
-            </div>
-            <div class="menu-item" onclick="nav('tab-electrical')" id="nav-electrical">
-                <span class="tool-icon">⚡</span> Tủ Điện
-            </div>
-            <div class="menu-item" onclick="nav('tab-store')" id="nav-store">
-                <span class="tool-icon">📦</span> Kho & Tài Liệu
-            </div>
+            <div class="menu-header">Khu Vực</div>
+            <div class="menu-item active" onclick="nav('tab-device')"><span class="tool-icon">🏭</span> Máy Móc</div>
+            <div class="menu-item" onclick="nav('tab-electrical')"><span class="tool-icon">⚡</span> Tủ Điện</div>
+            <div class="menu-item" onclick="nav('tab-store')"><span class="tool-icon">📦</span> Kho & Tài Liệu</div>
         </div>
 
         <div class="menu-group">
-            <div class="menu-header">Dụng Cụ (Tap to Use)</div>
+            <div class="menu-header">Dụng Cụ</div>
             <div class="menu-item" onclick="selectTool('lock')"><span class="tool-icon">🔒</span> Ổ Khóa</div>
             <div class="menu-item" onclick="selectTool('tag')"><span class="tool-icon">🏷️</span> Thẻ Cảnh Báo</div>
             <div class="menu-item" onclick="selectTool('meter')"><span class="tool-icon">⚡</span> Đồng Hồ VOM</div>
             <div class="menu-item" onclick="selectTool('speaker')"><span class="tool-icon">📢</span> Loa Thông Báo</div>
         </div>
-        
-        <div class="menu-group" id="admin-menu" style="display:none; border-top: 2px solid var(--danger);">
-            <div class="menu-header" style="color:var(--danger)">Giảng Viên</div>
-            <div class="menu-item" onclick="location.reload()">⚠️ Reset All</div>
+
+        <div class="menu-group" id="menu-instructor" style="display:none; border-top: 2px solid var(--danger);">
+             <div class="menu-header" style="color:var(--danger)">Giảng Viên</div>
+             <div class="menu-item" onclick="nav('tab-instructor')"><span class="tool-icon">🎓</span> Xem Log & Giám Sát</div>
         </div>
     </div>
 
     <div class="main-content">
         
         <div id="tab-device" class="tab-view">
+            
             <div id="worker-npc" class="worker-container">
-                <svg class="worker-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="30" r="20" fill="#f1c40f" stroke="#333" stroke-width="2"/> <rect x="30" y="50" width="40" height="70" fill="#3498db" /> <line x1="30" y1="60" x2="10" y2="100" stroke="#f39c12" stroke-width="8"/> <line x1="70" y1="60" x2="90" y2="100" stroke="#f39c12" stroke-width="8"/> <line x1="40" y1="120" x2="40" y2="180" stroke="#333" stroke-width="8"/> <line x1="60" y1="120" x2="60" y2="180" stroke="#333" stroke-width="8"/> <text x="50" y="200" font-size="20" text-anchor="middle" fill="white">Vận hành</text>
+                <svg class="worker-svg" viewBox="0 0 100 200">
+                    <circle cx="50" cy="30" r="20" fill="#f1c40f" stroke="#333" stroke-width="2"/>
+                    <rect class="worker-body" x="30" y="50" width="40" height="70" fill="#3498db" />
+                    <line x1="30" y1="60" x2="10" y2="100" stroke="#f39c12" stroke-width="8"/>
+                    <line x1="70" y1="60" x2="90" y2="100" stroke="#f39c12" stroke-width="8"/>
+                    <line x1="40" y1="120" x2="40" y2="180" stroke="#333" stroke-width="8"/>
+                    <line x1="60" y1="120" x2="60" y2="180" stroke="#333" stroke-width="8"/>
                 </svg>
             </div>
 
@@ -233,11 +244,14 @@
                     <div class="blade spin" id="blade3" style="transform: rotate(240deg);"></div>
                 </div>
                 <h3 id="machine-status" style="color:var(--success)">ĐANG CHẠY</h3>
-                <p style="font-size: 0.8rem; color: #aaa;">(Chạm vào máy để tương tác)</p>
             </div>
+            
             <div style="width: 100%; z-index: 10;">
-                <button class="btn btn-success" onclick="toggleMachine(true)">NÚT XANH (START)</button>
-                <button class="btn btn-danger" onclick="toggleMachine(false)">NÚT ĐỎ (STOP)</button>
+                <div class="controls-row">
+                    <button class="btn btn-success" onclick="toggleMachine(true)">START</button>
+                    <button class="btn btn-danger" onclick="toggleMachine(false)">STOP</button>
+                </div>
+                <button class="btn btn-permit" onclick="handlePermit()">📝 CHO PHÉP LÀM VIỆC</button>
             </div>
         </div>
 
@@ -269,27 +283,30 @@
         <div id="tab-store" class="tab-view">
             <div class="card" style="background:white; color:#333;">
                 <h3>SƠ ĐỒ NGUYÊN LÝ</h3>
-                <svg width="100%" height="200" viewBox="0 0 300 200">
+                <svg width="100%" height="150" viewBox="0 0 300 150">
                     <text x="10" y="20" font-weight="bold">380V</text>
-                    <line x1="20" y1="30" x2="20" y2="180" stroke="red" stroke-width="4"/>
-                    <line x1="20" y1="100" x2="100" y2="100" stroke="black" stroke-width="2"/>
-                    <rect x="100" y="85" width="40" height="30" fill="none" stroke="blue" stroke-width="2"/>
-                    <text x="105" y="105" font-size="10" fill="blue">CB-2</text>
-                    <line x1="140" y1="100" x2="220" y2="100" stroke="black" stroke-width="2"/>
-                    <circle cx="240" cy="100" r="15" fill="#333"/>
-                    <text x="220" y="140" font-size="12" font-weight="bold">FAN</text>
+                    <line x1="20" y1="30" x2="20" y2="140" stroke="red" stroke-width="4"/>
+                    <line x1="20" y1="80" x2="100" y2="80" stroke="black" stroke-width="2"/>
+                    <rect x="100" y="65" width="40" height="30" fill="none" stroke="blue" stroke-width="2"/>
+                    <text x="105" y="85" font-size="10" fill="blue">CB-2</text>
+                    <line x1="140" y1="80" x2="220" y2="80" stroke="black" stroke-width="2"/>
+                    <circle cx="240" cy="80" r="15" fill="#333"/>
+                    <text x="220" y="120" font-size="12" font-weight="bold">FAN</text>
                 </svg>
-                <p><strong>Ghi chú:</strong> CB-2 cấp nguồn cho Quạt.</p>
             </div>
-
             <div class="card" style="text-align: left;">
-                <h3>KIỂM KÊ DỤNG CỤ</h3>
-                <ul style="list-style: none; padding: 0;">
-                     <li style="border-bottom:1px solid #444; padding:10px 0;">🔒 Ổ khóa an toàn: <strong>5</strong></li>
-                     <li style="border-bottom:1px solid #444; padding:10px 0;">🏷️ Thẻ cảnh báo: <strong>50</strong></li>
-                     <li style="border-bottom:1px solid #444; padding:10px 0;">⚡ Đồng hồ VOM: <strong>Tốt</strong></li>
-                </ul>
+                <h3>KHO DỤNG CỤ</h3>
+                <p>🔒 Khóa: 5 | 🏷️ Thẻ: 50 | ⚡ VOM: OK</p>
             </div>
+        </div>
+
+        <div id="tab-instructor" class="tab-view">
+             <div class="card" style="text-align: left;">
+                 <h3 style="color:var(--warning); margin:0;">GIÁM SÁT THỜI GIAN THỰC</h3>
+                 <div id="log-container" class="log-panel">
+                     </div>
+                 <button class="btn btn-danger" onclick="location.reload()" style="margin-top:10px;">RESET SIMULATION</button>
+             </div>
         </div>
 
     </div>
@@ -302,7 +319,7 @@
         // STATE
         let currentTool = null;
         let sys = { cb2: true, cb2_locked: false, cb2_tagged: false };
-        let workerPresent = true;
+        let userName = "Guest";
 
         // AUTH
         function doLogin() {
@@ -313,9 +330,33 @@
         }
         function onUser(u) {
             document.getElementById('screen-login').classList.remove('show');
-            document.getElementById('user-display').innerText = u.email.split('@')[0];
+            userName = u.email.split('@')[0];
+            document.getElementById('user-display').innerText = userName;
             nav('tab-device');
-            if(u.email === 'deptc.gvatvsld@gmail.com') document.getElementById('admin-menu').style.display = 'block';
+            
+            // Log Login
+            logAction("Đăng nhập hệ thống");
+
+            if(u.email === 'deptc.gvatvsld@gmail.com') {
+                document.getElementById('menu-instructor').style.display = 'block';
+            }
+        }
+
+        // LOGGING SYSTEM
+        function logAction(action, isDanger = false) {
+            const container = document.getElementById('log-container');
+            const time = new Date().toLocaleTimeString();
+            const dangerClass = isDanger ? 'log-danger' : '';
+            
+            const html = `
+                <div class="log-entry">
+                    <span class="log-time">[${time}]</span> 
+                    <span class="log-user">${userName}:</span> 
+                    <span class="log-action ${dangerClass}">${action}</span>
+                </div>
+            `;
+            container.innerHTML += html;
+            container.scrollTop = container.scrollHeight; // Auto scroll
         }
 
         // NAVIGATION
@@ -324,101 +365,125 @@
         function nav(tabId) {
             document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('show'));
             document.getElementById(tabId).classList.add('show');
-            document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
-            const n = document.getElementById(tabId.replace('tab', 'nav'));
-            if(n) n.classList.add('active');
             closeSidebar();
         }
 
         // TOOL SELECT
         function selectTool(type) {
             currentTool = type;
-            const map = { lock: "🔒 Ổ Khóa", tag: "🏷️ Thẻ", meter: "⚡ VOM", speaker: "📢 Loa" };
+            const map = { lock: "Ổ Khóa", tag: "Thẻ", meter: "VOM", speaker: "Loa" };
             document.getElementById('active-tool-hud').classList.add('show');
-            document.getElementById('hud-icon').innerText = map[type].split(' ')[0];
+            document.getElementById('hud-icon').innerText = "🔧";
             document.getElementById('hud-text').innerText = map[type];
             closeSidebar();
-            showToast(`Đã chọn: ${map[type]}`);
+            logAction(`Lấy dụng cụ: ${map[type]}`);
         }
         function clearTool() {
             currentTool = null;
             document.getElementById('active-tool-hud').classList.remove('show');
-            showToast("Đã cất dụng cụ");
         }
 
         // INTERACTIONS
-        function handleTapMachine() {
-            if (currentTool === 'speaker') {
-                if(!workerPresent) { showToast("Không có ai để thông báo."); return; }
-                
-                // 1. Text to Speech
-                speak("Chú ý! Chú ý! Chúng tôi chuẩn bị cắt điện và dừng máy để bảo trì. Yêu cầu mọi người rời khỏi khu vực làm việc.");
-                
-                showToast("📢 Đang phát thông báo...");
-                clearTool();
-
-                // 2. Animation after 5 seconds
-                setTimeout(() => {
-                    document.getElementById('worker-npc').classList.add('worker-leave');
-                    workerPresent = false;
-                    showToast("Người vận hành đã rời đi.");
-                }, 5000);
-
-            } else if (currentTool) showToast("Không dùng dụng cụ này ở đây.");
-        }
-
-        function handleTapCB(id) {
-            if (id === 2) {
-                if (currentTool === 'lock') {
-                    if(sys.cb2) return showToast("⚡ CÒN ĐIỆN! Cắt CB trước.");
-                    if(sys.cb2_locked) return showToast("Đã khóa rồi!");
-                    sys.cb2_locked = true;
-                    document.getElementById('cb2-lock-viz').innerHTML = '<div class="vis-lock">🔒</div>';
-                    showToast("✅ Đã khóa"); clearTool();
-                } else if (currentTool === 'tag') {
-                    if(!sys.cb2_locked) return showToast("⚠️ Phải khóa trước!");
-                    sys.cb2_tagged = true;
-                    document.getElementById('cb2-tag-viz').innerHTML = '<div class="vis-tag">🏷️</div>';
-                    showToast("✅ Đã treo thẻ"); clearTool();
-                } else if (currentTool === 'meter') {
-                    showToast("⏳ Đang đo...");
-                    setTimeout(() => showToast(sys.cb2 ? "⚡ 380V (NGUY HIỂM)" : "✅ 0V (AN TOÀN)"), 1000);
-                } else if (!currentTool) {
-                    if(sys.cb2_locked) return showToast("⛔ Đã khóa LOTO!");
-                    sys.cb2 = !sys.cb2;
-                    toggleMachine(sys.cb2);
-                    const el = document.getElementById('cb2-lever');
-                    sys.cb2 ? (el.classList.remove('off'), el.innerText="ON") : (el.classList.add('off'), el.innerText="OFF");
-                }
-            } else {
-                 if(!currentTool) {
-                     const el = document.getElementById(`cb${id}-lever`);
-                     el.classList.toggle('off'); el.innerText = el.classList.contains('off') ? "OFF" : "ON";
-                 } else showToast("Sai thiết bị!");
-            }
-        }
-
-        // HELPERS
+        
+        // 1. MACHINE BUTTONS
         function toggleMachine(run) {
             const blades = document.querySelectorAll('.blade');
             const st = document.getElementById('machine-status');
             if(run && sys.cb2) {
                 blades.forEach(b => b.style.animation = "spin 0.2s linear infinite");
                 st.innerText = "ĐANG CHẠY"; st.style.color = "var(--success)";
+                logAction("Nhấn nút START (Máy chạy)");
             } else {
                 blades.forEach(b => b.style.animation = "none");
                 st.innerText = "ĐÃ DỪNG"; st.style.color = "#bdc3c7";
+                logAction("Nhấn nút STOP");
             }
         }
 
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'vi-VN';
-                utterance.rate = 0.9;
-                speechSynthesis.speak(utterance);
+        // 2. WORK PERMIT (ACCIDENT LOGIC)
+        function handlePermit() {
+            logAction("Yêu cầu: Cho phép làm việc");
+            
+            const worker = document.getElementById('worker-npc');
+            const svg = worker.querySelector('.worker-svg');
+            
+            // Reset position
+            worker.className = 'worker-container'; 
+            svg.classList.remove('shocked');
+            
+            // Step 1: Walk in
+            setTimeout(() => {
+                worker.classList.add('worker-walk-in');
+            }, 100);
+
+            // Step 2: Check Safety after walking in (approx 1.5s)
+            setTimeout(() => {
+                if(sys.cb2) {
+                    // UNSAFE: Power ON -> SHOCK
+                    svg.classList.add('shocked');
+                    document.getElementById('shock-flash').style.display = 'block';
+                    logAction("TAI NẠN: ĐIỆN GIẬT (Máy còn điện)", true);
+                    showToast("⚡ TAI NẠN ĐIỆN GIẬT! ⚡");
+                } else if (!sys.cb2_locked) {
+                     // UNSAFE: Power Off but NO LOCK -> SHOCK (Simulation Rule)
+                     svg.classList.add('shocked');
+                     document.getElementById('shock-flash').style.display = 'block';
+                     logAction("TAI NẠN: ĐIỆN GIẬT (Chưa khóa LOTO)", true);
+                     showToast("⚡ TAI NẠN! CHƯA KHÓA LOTO!");
+                } else {
+                    // SAFE
+                    logAction("An toàn. Bắt đầu sửa chữa.", false);
+                    showToast("✅ An toàn. Đang sửa chữa...");
+                }
+            }, 1500);
+
+            // Stop flash after a bit
+            setTimeout(() => {
+                document.getElementById('shock-flash').style.display = 'none';
+            }, 3000);
+        }
+
+        // 3. ELECTRICAL PANEL
+        function handleTapCB(id) {
+            if (id === 2) {
+                if (currentTool === 'lock') {
+                    if(sys.cb2) { showToast("⚡ Còn điện!"); logAction("Lỗi: Khóa khi còn điện"); return; }
+                    sys.cb2_locked = true;
+                    document.getElementById('cb2-lock-viz').innerHTML = '<div class="vis-lock">🔒</div>';
+                    logAction("Đã khóa CB-2"); clearTool();
+                } else if (currentTool === 'tag') {
+                    if(!sys.cb2_locked) { showToast("⚠️ Khóa trước!"); return; }
+                    sys.cb2_tagged = true;
+                    document.getElementById('cb2-tag-viz').innerHTML = '<div class="vis-tag">🏷️</div>';
+                    logAction("Đã treo thẻ CB-2"); clearTool();
+                } else if (currentTool === 'meter') {
+                    showToast("⏳ Đang đo...");
+                    setTimeout(() => {
+                        const res = sys.cb2 ? "380V" : "0V";
+                        showToast(`Kết quả: ${res}`);
+                        logAction(`Đo điện áp CB-2: ${res}`);
+                    }, 1000);
+                } else if (!currentTool) {
+                    if(sys.cb2_locked) { showToast("⛔ Đã khóa!"); return; }
+                    sys.cb2 = !sys.cb2;
+                    toggleMachine(sys.cb2);
+                    const el = document.getElementById('cb2-lever');
+                    sys.cb2 ? (el.classList.remove('off'), el.innerText="ON") : (el.classList.add('off'), el.innerText="OFF");
+                    logAction(`Gạt CB-2: ${sys.cb2 ? 'ON' : 'OFF'}`);
+                }
             } else {
-                alert("Trình duyệt không hỗ trợ đọc giọng nói.");
+                 if(!currentTool) {
+                     const el = document.getElementById(`cb${id}-lever`);
+                     el.classList.toggle('off'); el.innerText = el.classList.contains('off') ? "OFF" : "ON";
+                 }
+            }
+        }
+        
+        function handleTapMachine() {
+            if(currentTool === 'speaker') {
+                logAction("Phát loa thông báo");
+                showToast("📢 Đã thông báo");
+                clearTool();
             }
         }
 
@@ -427,6 +492,7 @@
             t.innerText = m; t.classList.add('show');
             setTimeout(()=>t.classList.remove('show'), 2500);
         }
+
     </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LOTO Mobile v1.12</title>
+    <title>LOTO Mobile v1.13</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -37,13 +37,12 @@
             position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
             box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
-
         #btn-menu {
             background: transparent; border: none; color: white;
             font-size: 1.8rem; padding: 10px; cursor: pointer;
         }
-
         .app-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
+        .user-info { font-size: 0.8rem; color: #ccc; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* --- SIDEBAR --- */
         .sidebar {
@@ -71,21 +70,7 @@
         }
         .backdrop.show { display: block; }
 
-        /* --- ACTIVE TOOL HUD --- */
-        #active-tool-hud {
-            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9); border: 2px solid var(--primary);
-            padding: 10px 20px; border-radius: 50px;
-            display: none; align-items: center; gap: 10px;
-            z-index: 1500; animation: bounceIn 0.3s;
-        }
-        #active-tool-hud.show { display: flex; }
-        .hud-icon { font-size: 1.5rem; }
-        .hud-text { font-size: 0.9rem; font-weight: bold; color: white; }
-        .hud-close { background: #e74c3c; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; cursor: pointer; }
-        @keyframes bounceIn { from { transform: translateX(-50%) scale(0.5); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
-
-        /* --- CONTENT --- */
+        /* --- CONTENT & TABS --- */
         .main-content { margin-top: var(--header-h); height: calc(100vh - var(--header-h)); overflow-y: auto; background: #2f3640; position: relative; }
         .tab-view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100%; }
         .tab-view.show { display: flex; }
@@ -101,6 +86,11 @@
         .spin { animation: spin 0.2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
+        /* Controls */
+        .controls-container {
+            width: 100%; z-index: 100; position: relative; background: #353b48; 
+            padding: 10px; border-radius: 8px; margin-top: 10px;
+        }
         .controls-row { display: flex; gap: 15px; justify-content: center; width: 100%; margin-bottom: 15px; }
         .btn { padding: 15px 25px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 1rem; flex: 1; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.3); }
         .btn:active { transform: translateY(2px); box-shadow: none; }
@@ -122,14 +112,19 @@
 
         /* --- WORKER ANIMATION --- */
         .worker-container {
-            position: absolute; bottom: 80px; left: -100px; 
-            z-index: 50; transition: transform 2s linear;
+            position: absolute; 
+            bottom: 140px; /* Nâng cao lên để không đè nút */
+            left: -100px; 
+            z-index: 5; /* Thấp hơn Controls (z-index 100) nhưng cao hơn nền */
+            transition: transform 2s linear;
+            pointer-events: none; /* Không chặn click chuột vào máy */
         }
-        .worker-svg { width: 80px; height: 120px; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
-        .worker-walk-in { transform: translateX(150px); }
+        .worker-svg { width: 90px; height: 140px; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
+        .worker-walk-in { transform: translateX(160px); }
         
         .shocked { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) infinite; }
         .shocked .worker-body { fill: #e74c3c !important; }
+
         @keyframes shake {
             10%, 90% { transform: translate3d(-2px, 0, 0) rotate(-5deg); }
             20%, 80% { transform: translate3d(4px, 0, 0) rotate(5deg); }
@@ -144,10 +139,22 @@
         }
         @keyframes flash { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
 
-        /* --- RESET OVERLAY (NEW) --- */
+        /* --- ACTIVE TOOL HUD --- */
+        #active-tool-hud {
+            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9); border: 2px solid var(--primary);
+            padding: 10px 20px; border-radius: 50px;
+            display: none; align-items: center; gap: 10px;
+            z-index: 1500; animation: bounceIn 0.3s;
+        }
+        #active-tool-hud.show { display: flex; }
+        .hud-close { background: #e74c3c; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 10px; cursor: pointer; }
+        @keyframes bounceIn { from { transform: translateX(-50%) scale(0.5); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+        /* --- RESET OVERLAY --- */
         #reset-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 9999;
+            background: rgba(0,0,0,0.9); z-index: 9999;
             display: none; align-items: center; justify-content: center; flex-direction: column;
             animation: fadeIn 1s ease-in;
         }
@@ -166,7 +173,6 @@
             opacity: 0; pointer-events: none; transition: 0.3s; z-index: 5000;
         }
         .toast.show { opacity: 1; bottom: 40px; }
-
         .log-panel {
             background: #000; color: #0f0; font-family: monospace; font-size: 0.8rem;
             padding: 10px; height: 200px; overflow-y: auto; border-radius: 5px;
@@ -182,8 +188,8 @@
     <div id="shock-flash"></div>
 
     <div id="reset-overlay">
-        <h1 style="color: var(--danger); text-transform: uppercase; margin-bottom: 30px;">Bài tập kết thúc</h1>
-        <button class="reset-btn" onclick="location.reload()">🔄 LÀM BÀI MỚI</button>
+        <h1 style="color: var(--danger); text-transform: uppercase; margin-bottom: 30px;">Đã xảy ra tai nạn</h1>
+        <button class="reset-btn" onclick="resetSimulation()">🔄 LÀM BÀI MỚI</button>
     </div>
 
     <div class="header">
@@ -191,14 +197,14 @@
             <button id="btn-menu" onclick="toggleSidebar()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
             </button>
-            <div class="app-title">LOTO Mobile v1.12</div>
+            <div class="app-title">LOTO Mobile v1.13</div>
         </div>
         <div class="user-info" id="user-display">Guest</div>
     </div>
 
     <div id="active-tool-hud">
-        <div class="hud-icon" id="hud-icon">🔧</div>
-        <div class="hud-text" id="hud-text">...</div>
+        <div style="font-size:1.5rem" id="hud-icon">🔧</div>
+        <div style="font-weight:bold; color:white; font-size:0.9rem" id="hud-text">...</div>
         <div class="hud-close" onclick="clearTool()">✕</div>
     </div>
     <div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
@@ -241,12 +247,8 @@
             <div id="worker-npc" class="worker-container">
                 <svg class="worker-svg" viewBox="0 0 100 200">
                     <circle cx="50" cy="30" r="20" fill="#f1c40f" stroke="#333" stroke-width="2"/>
-                    <rect class="worker-body" x="30" y="50" width="40" height="70" fill="#3498db" />
-                    <line x1="30" y1="60" x2="10" y2="100" stroke="#f39c12" stroke-width="8"/>
-                    <line x1="70" y1="60" x2="90" y2="100" stroke="#f39c12" stroke-width="8"/>
-                    <line x1="40" y1="120" x2="40" y2="180" stroke="#333" stroke-width="8"/>
-                    <line x1="60" y1="120" x2="60" y2="180" stroke="#333" stroke-width="8"/>
-                </svg>
+                    <rect class="worker-body" x="25" y="50" width="50" height="80" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+                    <line x1="25" y1="60" x2="10" y2="100" stroke="#f39c12" stroke-width="8" stroke-linecap="round"/> <line x1="75" y1="60" x2="90" y2="100" stroke="#f39c12" stroke-width="8" stroke-linecap="round"/> <line x1="35" y1="130" x2="35" y2="190" stroke="#333" stroke-width="10" stroke-linecap="round"/> <line x1="65" y1="130" x2="65" y2="190" stroke="#333" stroke-width="10" stroke-linecap="round"/> </svg>
             </div>
 
             <div class="card" onclick="handleTapMachine()" style="position: relative; z-index: 10;">
@@ -259,7 +261,7 @@
                 <h3 id="machine-status" style="color:var(--success)">ĐANG CHẠY</h3>
             </div>
             
-            <div style="width: 100%; z-index: 10;">
+            <div class="controls-container">
                 <div class="controls-row">
                     <button class="btn btn-success" onclick="toggleMachine(true)">START</button>
                     <button class="btn btn-danger" onclick="toggleMachine(false)">STOP</button>
@@ -294,10 +296,50 @@
         </div>
 
         <div id="tab-store" class="tab-view">
+            <div class="card" style="background:white; color:#333; text-align: left;">
+                <h3 style="text-align: center;">SƠ ĐỒ ĐƠN TUYẾN DB-01</h3>
+                <svg width="100%" height="250" viewBox="0 0 350 250">
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto">
+                          <path d="M0,0 L0,6 L9,3 z" fill="#333" />
+                        </marker>
+                    </defs>
+                    
+                    <text x="10" y="20" font-weight="bold" font-size="14">BUSBAR 380V</text>
+                    <line x1="20" y1="30" x2="20" y2="230" stroke="red" stroke-width="6"/>
+
+                    <path d="M23 50 L100 50" stroke="black" stroke-width="2" fill="none"/>
+                    <rect x="100" y="40" width="30" height="20" stroke="black" fill="none"/>
+                    <text x="105" y="55" font-size="10">CB1</text>
+                    <line x1="130" y1="50" x2="280" y2="50" stroke="black" stroke-width="2"/>
+                    <circle cx="290" cy="50" r="8" stroke="black" fill="yellow"/>
+                    <text x="305" y="55" font-size="12">Light</text>
+
+                    <path d="M23 110 L80 110" stroke="black" stroke-width="2" fill="none"/>
+                    <rect x="80" y="100" width="40" height="20" stroke="blue" stroke-width="3" fill="none"/>
+                    <text x="85" y="115" font-size="10" fill="blue" font-weight="bold">CB-2</text>
+                    
+                    <path d="M120 110 L160 110" stroke="black" stroke-width="2"/>
+                    <rect x="160" y="100" width="30" height="20" stroke="#555" fill="#ddd"/>
+                    <text x="162" y="115" font-size="8">KM2</text> <path d="M190 110 L220 110" stroke="black" stroke-width="2"/>
+                    <rect x="220" y="100" width="30" height="20" stroke="#555" fill="#ddd"/>
+                    <text x="222" y="115" font-size="8">OL</text> <line x1="250" y1="110" x2="280" y2="110" stroke="black" stroke-width="2" marker-end="url(#arrow)"/>
+                    <circle cx="295" cy="110" r="15" fill="#333"/>
+                    <text x="280" y="140" font-size="12" font-weight="bold">M2 (QUẠT)</text>
+
+                    <path d="M23 180 L100 180" stroke="black" stroke-width="2" fill="none"/>
+                    <rect x="100" y="170" width="30" height="20" stroke="black" fill="none"/>
+                    <text x="105" y="185" font-size="10">CB3</text>
+                    <text x="150" y="185" font-size="12">Ổ cắm</text>
+                </svg>
+                <div style="background: #eee; padding: 10px; font-size: 0.85rem; border-radius: 4px;">
+                    <strong>Yêu cầu:</strong> Xác định đúng CB cấp nguồn cho Động cơ Quạt (M2).
+                </div>
+            </div>
+
             <div class="card" style="text-align: left;">
                 <h3>KHO DỤNG CỤ</h3>
                 <p>🔒 Ổ khóa: 5 | 🏷️ Thẻ: 50 | 🔗 Hasp: 3 | 🗃️ KeyBox: 1</p>
-                <hr>
                 <small>Dùng menu bên trái để lấy dụng cụ</small>
             </div>
         </div>
@@ -306,7 +348,7 @@
              <div class="card" style="text-align: left;">
                  <h3 style="color:var(--warning); margin:0;">GIÁM SÁT</h3>
                  <div id="log-container" class="log-panel"></div>
-                 <button class="btn btn-danger" onclick="location.reload()" style="margin-top:10px;">RESET</button>
+                 <button class="btn btn-danger" onclick="resetSimulation()" style="margin-top:10px;">SOFT RESET</button>
              </div>
         </div>
 
@@ -383,7 +425,6 @@
                     if(sys.cb2) { showToast("⚡ Còn điện!"); logAction("Lỗi: Khóa khi còn điện"); return; }
                     
                     sys.cb2_locked = true;
-                    // Visual differentiation between Lock and Hasp
                     let icon = currentTool === 'hasp' ? '<div class="vis-hasp">🔗</div>' : '<div class="vis-lock">🔒</div>';
                     document.getElementById('cb2-lock-viz').innerHTML = icon;
                     
@@ -423,19 +464,19 @@
                 showToast("📢 Đã thông báo");
                 clearTool();
             } else if (currentTool === 'keybox') {
-                 showToast("Đã đặt Key Box tại khu vực máy");
+                 showToast("Đã đặt Key Box");
                  logAction("Đặt Key Box");
                  clearTool();
             }
         }
 
-        // ACCIDENT SCENARIO & RESET
+        // ACCIDENT & SOFT RESET
         function handlePermit() {
             logAction("Cấp phép làm việc");
             const worker = document.getElementById('worker-npc');
             const svg = worker.querySelector('.worker-svg');
             
-            // Reset & Start Animation
+            // Start Animation
             worker.className = 'worker-container'; 
             svg.classList.remove('shocked');
             setTimeout(() => worker.classList.add('worker-walk-in'), 100);
@@ -452,17 +493,47 @@
                     logAction("TAI NẠN: ĐIỆN GIẬT", true);
                     showToast("⚡ TAI NẠN ĐIỆN GIẬT! ⚡");
                     
-                    // 10 SECONDS DELAY THEN RESET BUTTON
+                    // Delay then show Soft Reset Button
                     setTimeout(() => {
                          document.getElementById('shock-flash').style.display = 'none';
-                         document.getElementById('reset-overlay').style.display = 'flex'; // Show reset
+                         document.getElementById('reset-overlay').style.display = 'flex';
                     }, 10000);
-                    
                 } else {
                     logAction("Bắt đầu sửa chữa (An toàn)", false);
                     showToast("✅ An toàn. Đang sửa chữa...");
                 }
             }, 1500);
+        }
+
+        function resetSimulation() {
+            // Soft Reset Logic: Reset state without reloading page
+            sys = { cb2: true, cb2_locked: false, cb2_tagged: false };
+            
+            // Reset UI Visuals
+            document.getElementById('cb2-lock-viz').innerHTML = '';
+            document.getElementById('cb2-tag-viz').innerHTML = '';
+            
+            // Reset CB Lever UI
+            const el = document.getElementById('cb2-lever');
+            el.classList.remove('off'); el.innerText = "ON";
+            
+            // Reset Machine
+            toggleMachine(true);
+
+            // Reset Worker
+            const worker = document.getElementById('worker-npc');
+            const svg = worker.querySelector('.worker-svg');
+            worker.className = 'worker-container';
+            svg.classList.remove('shocked');
+
+            // Hide Overlays
+            document.getElementById('reset-overlay').style.display = 'none';
+            document.getElementById('shock-flash').style.display = 'none';
+            
+            // Log reset
+            logAction("--- RESET BÀI TẬP ---");
+            nav('tab-device'); // Back to start
+            showToast("Đã làm mới bài tập");
         }
 
         // UTILS

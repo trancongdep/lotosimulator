@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Đào Tạo An Toàn LOTO (Ver 1.1)</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #2c3e50;
+            --bg-panel: #34495e;
+            --text-light: #ecf0f1;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f1c40f;
+            --metal: #95a5a6;
+            --instructor-color: #e67e22;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: #222;
+            overflow: hidden;
+            color: var(--text-light);
+        }
+
+        /* --- CÁC MÀN HÌNH (SCREENS) --- */
+        .screen {
+            display: none; /* Mặc định ẩn hết */
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0; left: 0;
+            flex-direction: column;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* --- MÀN HÌNH LOGIN --- */
+        #login-screen {
+            background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            color: #333;
+            max-width: 400px;
+            width: 90%;
+        }
+        .btn-google {
+            background: #db4437; color: white; border: none; padding: 12px 24px;
+            font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            width: 100%; margin-top: 20px; transition: 0.2s;
+        }
+        .btn-google:hover { background: #c0392b; transform: translateY(-2px); }
+
+        /* --- MÀN HÌNH GIẢNG VIÊN --- */
+        #instructor-screen {
+            background: #2c3e50;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .inst-dashboard {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            height: 100%;
+        }
+        .inst-panel {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid #7f8c8d;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .inst-title { color: var(--instructor-color); border-bottom: 2px solid var(--instructor-color); padding-bottom: 10px; margin-top: 0;}
+
+        /* --- MÀN HÌNH HỌC VIÊN (SIMULATION) --- */
+        #student-screen {
+            background: var(--bg-panel);
+            display: grid;
+            grid-template-columns: 3fr 1fr; /* 75% Máy móc, 25% Công cụ */
+            height: 100vh;
+        }
+
+        /* Work Zone (Student) */
+        .work-zone {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            border-right: 4px solid #222;
+        }
+
+        /* Toolbox Zone (Student) */
+        .toolbox-zone {
+            background: #222;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- UI COMPONENTS --- */
+        .module-card {
+            background: #ecf0f1; color: #333; padding: 20px; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative;
+        }
+        
+        /* Floating Toggle Button (Only for Instructor) */
+        #role-switcher {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--instructor-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: none; /* Chỉ hiện khi là giảng viên */
+            border: 2px solid white;
+            transition: 0.3s;
+        }
+        #role-switcher:hover { transform: scale(1.1); }
+
+        /* --- VISUAL ELEMENTS (MACHINE, BREAKER, TOOLS) --- */
+        /* Reusing styled components from V2 but optimized for Full Screen */
+        
+        .machine-viz {
+            height: 200px; background: #bdc3c7; border-radius: 5px; border: 3px solid #7f8c8d;
+            display: flex; align-items: center; justify-content: center; position: relative;
+        }
+        .fan-blade {
+            width: 140px; height: 15px; background: #333; position: absolute; border-radius: 50%;
+        }
+        .fan-blade:nth-child(1) { transform: rotate(0deg); }
+        .fan-blade:nth-child(2) { transform: rotate(120deg); }
+        .fan-blade:nth-child(3) { transform: rotate(240deg); }
+        .spinning { animation: spin 0.3s linear infinite; }
+        .coasting { animation: spin 4s cubic-bezier(0.1, 0.7, 1.0, 0.1) forwards; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .breaker-container {
+            width: 120px; height: 180px; background: #34495e; margin: 0 auto;
+            position: relative; border-radius: 5px; border: 3px solid #2c3e50;
+        }
+        .breaker-handle {
+            width: 100px; height: 80px; background: #e74c3c; 
+            position: absolute; left: 7px; top: 10px; border-radius: 4px; cursor: pointer;
+            transition: top 0.3s, background 0.3s;
+            display: flex; align-items: center; justify-content: center; 
+            color: white; font-weight: bold; font-size: 1.2rem;
+            z-index: 2;
+        }
+        .breaker-handle.off { top: 90px; background: #2ecc71; }
+        .hasp-hole {
+            width: 30px; height: 30px; background: #111; border-radius: 50%;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            border: 2px solid silver; z-index: 1;
+        }
+
+        /* Tools */
+        .tool-item {
+            width: 90%; margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.1);
+            border: 2px dashed #7f8c8d; border-radius: 8px; cursor: grab; text-align: center;
+        }
+        .tool-item img, .tool-item svg { width: 60px; height: auto; display: block; margin: 0 auto; }
+        
+        /* Elements on Drop */
+        .deployed-lock { position: absolute; top: 70px; left: 45%; z-index: 10; pointer-events: none;}
+        .deployed-tag { position: absolute; top: 100px; left: 60%; transform: rotate(-10deg); z-index: 11; pointer-events: none; }
+
+        /* User Info Top Right */
+        .user-info {
+            position: absolute; top: 10px; right: 20px; font-size: 0.9rem;
+            background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 2000;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+            text-align: center;
+        }
+        .overlay h1 { font-size: 3rem; margin: 0 0 20px 0; }
+        .btn-reset { padding: 15px 30px; font-size: 1.2rem; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <div id="role-switcher" onclick="toggleInstructorView()">🔄 Switch View (Giảng viên)</div>
+
+    <div id="login-screen" class="screen active">
+        <div class="login-box">
+            <h1 style="color: #2c3e50; border-bottom: 2px solid #e74c3c; display: inline-block;">LOTO TRAINING</h1>
+            <p>Hệ thống mô phỏng an toàn điện & cơ khí</p>
+            <p style="font-size: 0.9rem; color: #7f8c8d; margin-bottom: 30px;">Vui lòng đăng nhập để xác định vai trò (Giảng viên/Học viên)</p>
+            
+            <button class="btn-google" onclick="handleGoogleLogin()">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z"/></svg>
+                Đăng nhập bằng Gmail
+            </button>
+            <p id="login-error" style="color: red; margin-top: 10px; font-size: 0.8rem;"></p>
+        </div>
+    </div>
+
+    <div id="instructor-screen" class="screen">
+        <div class="user-info">👤 Giảng viên: <span id="inst-email"></span></div>
+        <h1 style="margin: 0 0 20px 0;">BẢNG ĐIỀU KHIỂN GIẢNG VIÊN</h1>
+        
+        <div class="inst-dashboard">
+            <div class="inst-panel">
+                <h3 class="inst-title">Danh sách thiết bị</h3>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="padding: 10px; background: #34495e; margin-bottom: 5px; border-left: 4px solid #2ecc71;">Máy nén khí số 1 (Online)</li>
+                    <li style="padding: 10px; background: #34495e; margin-bottom: 5px; border-left: 4px solid #e74c3c;">Quạt công nghiệp 03 (Đang bảo trì)</li>
+                    <li style="padding: 10px; background: #34495e; margin-bottom: 5px;">Băng tải chuyền 2 (Offline)</li>
+                </ul>
+                <div style="margin-top: 20px; padding: 10px; background: rgba(231, 76, 60, 0.2); border: 1px solid var(--danger);">
+                    <strong>Trạng thái Simulation:</strong>
+                    <div id="sim-status-display">Đang chờ...</div>
+                </div>
+            </div>
+
+            <div class="inst-panel">
+                <h3 class="inst-title">Nhật ký Hệ thống (Real-time Log)</h3>
+                <div id="console-log" style="height: 300px; background: black; color: #0f0; font-family: monospace; padding: 10px; overflow-y: scroll;">
+                    > System initialized...<br>
+                    > Waiting for student actions...<br>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button onclick="resetSimulation()" style="padding: 10px 20px; background: var(--danger); color: white; border: none; cursor: pointer; border-radius: 4px;">Reset Bài Tập</button>
+                    <button onclick="forceAccident()" style="padding: 10px 20px; background: var(--warning); color: #333; border: none; cursor: pointer; border-radius: 4px;">Tạo Lỗi Ngẫu Nhiên</button>
+                </div>
+                <p><em>*Nhấn nút "Switch View" ở góc trái dưới để xem màn hình của học viên.</em></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="student-screen" class="screen">
+        <div class="user-info">👷 Học viên: <span id="student-email"></span></div>
+        
+        <div class="work-zone">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">KHU VỰC BẢO TRÌ: QUẠT CÔNG NGHIỆP 03</h2>
+                <div>
+                    <button onclick="stepNotify()" class="btn-step" style="background:#3498db; color:white; padding: 10px; border:none; cursor:pointer; border-radius:4px;">1. Thông báo</button>
+                    <button onclick="stepMaintenance()" class="btn-step" style="background:#9b59b6; color:white; padding: 10px; border:none; cursor:pointer; border-radius:4px; font-weight:bold;">🛠️ TIẾN HÀNH SỬA CHỮA</button>
+                </div>
+            </div>
+
+            <div class="module-card">
+                <h3>Thiết Bị (Motor)</h3>
+                <div class="machine-viz">
+                    <div class="fan-blade" id="fan-blade-1"></div>
+                    <div class="fan-blade" id="fan-blade-2"></div>
+                    <div class="fan-blade" id="fan-blade-3"></div>
+                    <div style="width: 20px; height: 20px; background: silver; border-radius: 50%; position: absolute; z-index: 5;"></div>
+                </div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button onclick="machineStart()" style="background: var(--success); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold;">START</button>
+                    <button onclick="machineStop()" style="background: var(--danger); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold;">STOP</button>
+                    <span id="machine-status" style="margin-left: 20px; font-weight: bold; color: var(--danger)">ĐANG CHẠY</span>
+                </div>
+            </div>
+
+            <div class="module-card" style="border: 2px solid var(--danger);">
+                <h3>Nguồn Điện (MCC Breaker)</h3>
+                <p style="font-size: 0.8rem;">Kéo thả Khóa/Thẻ/Đồng hồ vào Aptomat để thao tác.</p>
+                <div class="breaker-container" id="drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div id="breaker-handle" class="breaker-handle" onclick="toggleBreaker()">ON</div>
+                    <div class="hasp-hole"></div>
+                    <div id="lock-container"></div>
+                </div>
+                <div style="text-align: center; margin-top: 10px; font-weight: bold;">380V AC</div>
+            </div>
+        </div>
+
+        <div class="toolbox-zone">
+            <h3 style="border-bottom: 1px solid white; padding-bottom: 5px; width: 100%; text-align: center;">HỘP DỤNG CỤ</h3>
+            
+            <div class="tool-item" draggable="true" ondragstart="drag(event)" id="tool-padlock">
+                <svg viewBox="0 0 100 120">
+                    <path d="M30,40 V25 A20,20 0 0,1 70,25 V40" fill="none" stroke="silver" stroke-width="8"/>
+                    <rect x="20" y="40" width="60" height="70" rx="5" fill="#c0392b"/>
+                    <text x="50" y="80" text-anchor="middle" fill="white" font-size="10">LOCK</text>
+                </svg>
+                <small>Ổ khóa</small>
+            </div>
+
+            <div class="tool-item" draggable="true" ondragstart="drag(event)" id="tool-tag">
+                <svg viewBox="0 0 80 120">
+                    <path d="M10,0 L70,0 L80,20 L80,120 L0,120 L0,20 Z" fill="#ecf0f1"/>
+                    <rect x="10" y="30" width="60" height="20" fill="red"/>
+                    <text x="40" y="45" text-anchor="middle" fill="white" font-size="10">DANGER</text>
+                </svg>
+                <small>Thẻ cảnh báo</small>
+            </div>
+
+            <div class="tool-item" draggable="true" ondragstart="drag(event)" id="tool-meter">
+                <svg viewBox="0 0 100 100">
+                    <rect x="20" y="10" width="60" height="80" rx="5" fill="#f1c40f"/>
+                    <text x="50" y="50" text-anchor="middle" fill="black">000</text>
+                </svg>
+                <small>Đồng hồ đo</small>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay-accident" class="overlay">
+        <h1 style="color: var(--danger)">⚡ TAI NẠN!</h1>
+        <h2 id="accident-msg" style="color: white"></h2>
+        <button class="btn-reset" onclick="resetSimulation()">Làm lại</button>
+    </div>
+
+    <div id="overlay-success" class="overlay">
+        <h1 style="color: var(--success)">✅ AN TOÀN TUYỆT ĐỐI</h1>
+        <h2 style="color: white">Bạn đã tuân thủ đúng quy trình LOTO.</h2>
+        <button class="btn-reset" onclick="resetSimulation()">Bài tập mới</button>
+    </div>
+
+    <script>
+        // 1. CONFIG FIREBASE (TỪ THÔNG TIN CỦA BẠN)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCzWjfcD5Dgq7V-i2izb9tKLR6QM6qWPQo",
+            authDomain: "tavietnam-78ae8.firebaseapp.com",
+            projectId: "tavietnam-78ae8",
+            storageBucket: "tavietnam-78ae8.firebasestorage.app",
+            messagingSenderId: "670121705534",
+            appId: "1:670121705534:web:1027ad98550573ad37116f"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // 2. STATE MANAGEMENT
+        let currentUser = null;
+        let userRole = 'student'; // 'student' or 'instructor'
+        const INSTRUCTOR_EMAIL = 'deptc.gvatvsld@gmail.com';
+
+        // Simulation State
+        let simState = {
+            power: true,
+            running: true,
+            locked: false,
+            tagged: false,
+            verified: false,
+            notified: false,
+            energy: 100
+        };
+
+        // 3. AUTH LOGIC
+        function handleGoogleLogin() {
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // Đăng nhập thành công, listener onAuthStateChanged sẽ xử lý tiếp
+                }).catch((error) => {
+                    console.error(error);
+                    document.getElementById('login-error').innerText = "Lỗi đăng nhập: " + error.message + " (Hãy đảm bảo domain được authorized trong Firebase Console)";
+                    
+                    // FALLBACK CHO MÔI TRƯỜNG KHÔNG CÓ SERVER (Chỉ để test)
+                    // Nếu chạy file:// sẽ lỗi, ta giả lập luôn
+                    if(window.location.protocol === 'file:') {
+                        let fakeEmail = prompt("Chế độ File Local (Test): Nhập email giả lập:", "deptc.gvatvsld@gmail.com");
+                        if(fakeEmail) manualLogin(fakeEmail);
+                    }
+                });
+        }
+
+        // Manual mock login for local testing if Firebase fails
+        function manualLogin(email) {
+            currentUser = { email: email };
+            processLoginSuccess(currentUser);
+        }
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                processLoginSuccess(user);
+            }
+        });
+
+        function processLoginSuccess(user) {
+            currentUser = user;
+            // Xác định vai trò
+            if (user.email === INSTRUCTOR_EMAIL) {
+                userRole = 'instructor';
+                document.getElementById('inst-email').innerText = user.email;
+                document.getElementById('role-switcher').style.display = 'block';
+                showScreen('instructor-screen');
+            } else {
+                userRole = 'student';
+                document.getElementById('student-email').innerText = user.email;
+                document.getElementById('role-switcher').style.display = 'none';
+                showScreen('student-screen');
+            }
+            systemLog(`User ${user.email} logged in as ${userRole}`);
+        }
+
+        // 4. UI SWITCHING (INSTRUCTOR ONLY)
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function toggleInstructorView() {
+            if (userRole !== 'instructor') return;
+            const current = document.querySelector('.screen.active').id;
+            if (current === 'instructor-screen') {
+                showScreen('student-screen'); // Xem màn hình học viên
+            } else {
+                showScreen('instructor-screen'); // Về dashboard
+            }
+        }
+
+        function systemLog(msg) {
+            const box = document.getElementById('console-log');
+            const time = new Date().toLocaleTimeString();
+            box.innerHTML += `> [${time}] ${msg}<br>`;
+            box.scrollTop = box.scrollHeight;
+            
+            // Cập nhật trạng thái vắn tắt bên Instructor Panel
+            document.getElementById('sim-status-display').innerText = 
+                `Power: ${simState.power ? 'ON' : 'OFF'} | Run: ${simState.running} | Locked: ${simState.locked}`;
+        }
+
+        // 5. SIMULATION LOGIC (FULL SCREEN ADAPTED)
+        
+        // Machine Physics Loop
+        setInterval(() => {
+            const blades = document.querySelectorAll('.fan-blade');
+            const statusText = document.getElementById('machine-status');
+
+            if (simState.running && simState.power) {
+                // Đang chạy có điện
+                simState.energy = 100;
+                blades.forEach(b => {
+                    b.classList.remove('coasting');
+                    b.classList.add('spinning');
+                });
+                statusText.innerText = "ĐANG CHẠY (NGUY HIỂM)";
+                statusText.style.color = "var(--danger)";
+            } else {
+                // Tắt điện hoặc tắt máy
+                blades.forEach(b => b.classList.remove('spinning'));
+                
+                if (simState.energy > 0) {
+                    // Quán tính
+                    simState.energy -= 2; // Giảm dần
+                    blades.forEach(b => b.classList.add('coasting')); // Animation quay chậm
+                    statusText.innerText = `DỪNG THEO QUÁN TÍNH (${simState.energy}%)`;
+                    statusText.style.color = "var(--warning)";
+                } else {
+                    // Dừng hẳn
+                    simState.energy = 0;
+                    blades.forEach(b => {
+                        b.classList.remove('coasting');
+                        b.style.transform = getComputedStyle(b).transform; // Freeze position
+                    });
+                    statusText.innerText = "ĐÃ DỪNG HOÀN TOÀN";
+                    statusText.style.color = "var(--success)";
+                }
+            }
+        }, 100);
+
+        // Actions
+        function machineStart() {
+            if (simState.power) {
+                simState.running = true;
+                systemLog("Student pressed START.");
+            } else {
+                systemLog("Student pressed START (No Power).");
+            }
+        }
+
+        function machineStop() {
+            simState.running = false;
+            systemLog("Student pressed STOP.");
+        }
+
+        function stepNotify() {
+            simState.notified = true;
+            alert("Đã thông báo cho người vận hành: 'Tôi chuẩn bị khóa máy'.");
+            systemLog("Student NOTIFIED operators.");
+        }
+
+        function toggleBreaker() {
+            if (simState.locked) {
+                alert("Không thể gạt Aptomat vì đã bị KHÓA!");
+                return;
+            }
+            simState.power = !simState.power;
+            const handle = document.getElementById('breaker-handle');
+            if (simState.power) {
+                handle.classList.remove('off');
+                handle.innerText = "ON";
+                systemLog("Student turned Breaker ON.");
+            } else {
+                handle.classList.add('off');
+                handle.innerText = "OFF";
+                systemLog("Student turned Breaker OFF.");
+            }
+        }
+
+        // Drag & Drop Logic
+        function drag(ev) {
+            ev.dataTransfer.setData("tool", ev.target.id);
+        }
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+        function drop(ev) {
+            ev.preventDefault();
+            const tool = ev.dataTransfer.getData("tool");
+            const container = document.getElementById('lock-container');
+
+            if (tool === 'tool-padlock') {
+                if (simState.power) {
+                    alert("NGUY HIỂM! Không thể khóa khi điện đang ON.");
+                    systemLog("Violation: Attempted to lock while ON.");
+                    return;
+                }
+                if (simState.locked) return;
+                simState.locked = true;
+                container.innerHTML += `<svg class="deployed-lock" width="50" height="60" viewBox="0 0 100 120"><path d="M30,40 V25 A20,20 0 0,1 70,25 V40" fill="none" stroke="silver" stroke-width="8"/><rect x="20" y="40" width="60" height="70" rx="5" fill="#c0392b"/><circle cx="50" cy="75" r="8" fill="#333"/></svg>`;
+                systemLog("Student APPLIED LOCK.");
+            }
+            else if (tool === 'tool-tag') {
+                if (!simState.locked) {
+                    alert("Phải khóa trước khi treo thẻ!");
+                    return;
+                }
+                simState.tagged = true;
+                container.innerHTML += `<svg class="deployed-tag" width="40" height="60" viewBox="0 0 80 120"><path d="M10,0 L70,0 L80,20 L80,120 L0,120 L0,20 Z" fill="#ecf0f1"/><rect x="5" y="25" width="70" height="30" fill="#c0392b"/><text x="40" y="45" font-size="14" text-anchor="middle" fill="white" font-weight="bold">DANGER</text></svg>`;
+                systemLog("Student APPLIED TAG.");
+            }
+            else if (tool === 'tool-meter') {
+                systemLog("Student verifying energy...");
+                setTimeout(() => {
+                    if (simState.power) {
+                        alert("ĐO ĐƯỢC: 380V !!! NGUY HIỂM.");
+                        systemLog("Verification Result: 380V (DANGER).");
+                    } else {
+                        alert("ĐO ĐƯỢC: 0V. An toàn.");
+                        simState.verified = true;
+                        systemLog("Verification Result: 0V (Safe).");
+                    }
+                }, 1000);
+            }
+        }
+
+        // Final Check
+        function stepMaintenance() {
+            // Accident 1: Electric Shock
+            if (simState.power) {
+                document.getElementById('accident-msg').innerText = "ĐIỆN GIẬT! Bạn chưa ngắt nguồn điện.";
+                document.getElementById('overlay-accident').style.display = 'flex';
+                systemLog("ACCIDENT: Electric Shock.");
+                return;
+            }
+
+            // Accident 2: Moving Parts
+            if (simState.energy > 5) {
+                document.getElementById('accident-msg').innerText = "TAI NẠN CƠ KHÍ! Máy vẫn đang quay theo quán tính.";
+                document.getElementById('overlay-accident').style.display = 'flex';
+                systemLog("ACCIDENT: Mechanical Injury.");
+                return;
+            }
+
+            // Accident 3: Someone turns power on (if not locked)
+            if (!simState.locked) {
+                // 80% chance of accident
+                if (Math.random() > 0.2) {
+                    document.getElementById('accident-msg').innerText = "AI ĐÓ ĐÃ BẬT ĐIỆN! Bạn quên khóa LOTO, người khác không biết nên đã đóng điện lại.";
+                    document.getElementById('overlay-accident').style.display = 'flex';
+                    systemLog("ACCIDENT: Re-energized by others (No Lock).");
+                    return;
+                }
+            }
+
+            // Success
+            if (simState.notified && simState.verified) {
+                document.getElementById('overlay-success').style.display = 'flex';
+                systemLog("SUCCESS: Task completed safely.");
+            } else {
+                if(confirm("Bạn đã bỏ qua bước Thông báo hoặc Đo điện. Vẫn làm?")) {
+                    document.getElementById('overlay-success').style.display = 'flex';
+                    systemLog("SUCCESS (With warnings): Process skipped.");
+                }
+            }
+        }
+
+        function resetSimulation() {
+            simState = { power: true, running: true, locked: false, tagged: false, verified: false, notified: false, energy: 100 };
+            document.getElementById('lock-container').innerHTML = "";
+            document.getElementById('breaker-handle').classList.remove('off');
+            document.getElementById('breaker-handle').innerText = "ON";
+            document.querySelectorAll('.overlay').forEach(o => o.style.display = 'none');
+            systemLog("Simulation RESET.");
+            if (userRole === 'instructor') showScreen('instructor-screen');
+            else showScreen('student-screen');
+        }
+
+        function forceAccident() {
+            // Instructor forces an event
+            simState.power = true;
+            toggleBreaker(); // Turn on physically
+            alert("Giảng viên đã kích hoạt sự cố: Đóng điện bất ngờ!");
+        }
+
+    </script>
+</body>
+</html>

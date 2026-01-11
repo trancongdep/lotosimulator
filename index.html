@@ -3,332 +3,333 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Đào Tạo LOTO (Ver 1.2)</title>
+    <title>LOTO Sim v1.4 - Unified Sidebar</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
     <style>
         :root {
-            --bg-dark: #1e272e;
-            --sidebar-width: 280px;
-            --danger: #ff4757;
-            --success: #2ed573;
-            --warning: #ffa502;
-            --metal: #747d8c;
-            --blue: #3742fa;
+            --bg-dark: #2f3640;
+            --sidebar-collapsed: 60px;
+            --sidebar-expanded: 260px;
+            --primary: #00a8ff;
+            --secondary: #9c88ff;
+            --danger: #e84118;
+            --success: #4cd137;
+            --text-color: #f5f6fa;
+            --panel-bg: #353b48;
         }
 
         body, html {
             margin: 0; padding: 0; height: 100%; width: 100%;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-dark);
-            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-color);
             overflow: hidden;
         }
 
-        /* --- SCREEN MANAGEMENT --- */
-        .screen {
-            display: none; width: 100vw; height: 100vh;
-            position: absolute; top: 0; left: 0;
+        /* --- HEADER (INFO ONLY) --- */
+        .header {
+            height: 40px; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; border-bottom: 1px solid #555;
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 500;
         }
-        .screen.active { display: flex; }
+        .app-ver { font-size: 0.8rem; background: var(--primary); padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 10px; color: white;}
 
-        /* --- LOGIN SCREEN --- */
-        #login-screen {
-            background: radial-gradient(circle, #2f3542 0%, #1e272e 100%);
-            align-items: center; justify-content: center; flex-direction: column;
-        }
-        .login-btn {
-            background: white; color: #333; padding: 15px 30px; border: none;
-            border-radius: 50px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.2s;
-        }
-        .login-btn:hover { transform: scale(1.05); }
-
-        /* --- INSTRUCTOR SCREEN --- */
-        #instructor-screen { flex-direction: column; padding: 20px; box-sizing: border-box;}
-        .inst-controls { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; height: 100%; }
-        .inst-panel { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; overflow-y: auto; }
-        
-        #role-switcher {
-            position: fixed; top: 20px; right: 20px; z-index: 9999;
-            background: var(--warning); color: black; padding: 8px 15px;
-            border-radius: 20px; cursor: pointer; font-weight: bold; display: none;
-            border: 2px solid white;
-        }
-
-        /* --- STUDENT SCREEN --- */
-        #student-screen {
-            display: flex; flex-direction: row; overflow: hidden;
-        }
-
-        /* SIDEBAR (TOOLBOX) */
+        /* --- UNIFIED SIDEBAR --- */
         .sidebar {
-            width: 60px; /* Collapsed width */
-            background: #2f3542;
-            border-right: 2px solid #57606f;
-            transition: width 0.3s;
-            display: flex; flex-direction: column; align-items: center;
-            padding-top: 20px; z-index: 100;
-            overflow: hidden;
+            position: fixed; left: 0; top: 40px; bottom: 0;
+            width: var(--sidebar-collapsed);
+            background: #1e272e;
+            border-right: 1px solid #444;
+            display: flex; flex-direction: column;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000; overflow: hidden;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
         }
-        .sidebar:hover { width: var(--sidebar-width); }
-        .sidebar-title { 
-            white-space: nowrap; font-weight: bold; margin-bottom: 20px; 
-            color: var(--warning); opacity: 0; transition: 0.2s;
-        }
-        .sidebar:hover .sidebar-title { opacity: 1; }
-
-        .tool-item {
-            display: flex; align-items: center; width: 90%; padding: 10px;
-            margin-bottom: 10px; cursor: grab; border-radius: 5px;
-            transition: background 0.2s; color: #dfe4ea;
-        }
-        .tool-item:hover { background: rgba(255,255,255,0.1); }
-        .tool-icon { font-size: 24px; min-width: 40px; text-align: center; }
-        .tool-label { white-space: nowrap; margin-left: 10px; opacity: 0; transition: 0.1s;}
-        .sidebar:hover .tool-label { opacity: 1; }
-
-        /* MAIN WORKSPACE */
-        .workspace {
-            flex-grow: 1; position: relative;
-            background: url('https://www.transparenttextures.com/patterns/dark-matter.png'), linear-gradient(to bottom, #535c68, #2c3e50);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        /* ELECTRICAL PANEL (3 CBs) */
-        .panel-box {
-            background: #dcdde1; border: 4px solid #7f8c8d; border-radius: 10px;
-            padding: 20px; display: flex; gap: 30px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
-        }
-        .panel-label {
-            position: absolute; top: -15px; left: 20px; background: #c23616; color: white;
-            padding: 5px 15px; font-weight: bold; border-radius: 4px; font-size: 0.9rem;
-        }
-
-        .cb-unit {
-            width: 80px; height: 160px; background: #353b48; border-radius: 4px;
-            position: relative; border: 2px solid #2f3640;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .cb-name { color: white; font-size: 0.7rem; margin-top: 5px; text-align: center;}
         
-        .cb-handle {
-            width: 60px; height: 50px; background: var(--danger);
-            border-radius: 4px; margin-top: 20px; cursor: pointer;
-            transition: transform 0.3s, background 0.3s;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: bold; font-size: 0.8rem; z-index: 5;
-            position: relative; top: 0;
+        .sidebar:hover { width: var(--sidebar-expanded); }
+
+        /* Sidebar Groups */
+        .sb-group {
+            padding: 10px 0;
+            border-bottom: 1px solid #353b48;
         }
-        .cb-handle.off { transform: translateY(50px); background: var(--success); }
-        
-        .cb-hole {
-            width: 20px; height: 20px; background: black; border-radius: 50%;
-            border: 2px solid silver; margin-top: 35px; z-index: 1;
+        .sb-title {
+            padding-left: 20px; margin-bottom: 5px;
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+            color: #7f8c8d; white-space: nowrap; opacity: 0; transition: 0.2s;
+        }
+        .sidebar:hover .sb-title { opacity: 1; }
+
+        /* Sidebar Items (Nav Buttons & Draggables) */
+        .sb-item {
+            display: flex; align-items: center;
+            height: 50px; width: 100%;
+            padding: 0; margin: 2px 0;
+            background: transparent; border: none;
+            color: #dcdde1; cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            text-decoration: none;
+        }
+        .sb-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .sb-item.active { background: rgba(0, 168, 255, 0.15); border-left: 4px solid var(--primary); }
+
+        .sb-icon {
+            width: var(--sidebar-collapsed); min-width: var(--sidebar-collapsed);
+            text-align: center; font-size: 1.5rem;
+        }
+        .sb-label {
+            white-space: nowrap; opacity: 0; transition: 0.2s; font-size: 1rem;
+        }
+        .sidebar:hover .sb-label { opacity: 1; }
+
+        /* Distinction for Draggable items */
+        .draggable-item { cursor: grab; }
+        .draggable-item:active { cursor: grabbing; }
+        .draggable-item .sb-icon { color: var(--secondary); } /* Tools have purple icons */
+
+        /* --- MAIN CONTENT --- */
+        .main-container {
+            margin-left: var(--sidebar-collapsed);
+            padding-top: 40px; height: 100vh; box-sizing: border-box;
+            transition: margin-left 0.3s;
+            background: url('https://www.transparenttextures.com/patterns/dark-matter.png'), linear-gradient(to bottom, #2f3640, #353b48);
         }
 
-        /* Items dropped on CB */
-        .deployed-lock { position: absolute; top: 80px; left: 15px; width: 50px; z-index: 10; pointer-events: none;}
-        .deployed-tag { position: absolute; top: 110px; left: 30px; width: 40px; transform: rotate(-10deg); z-index: 11; pointer-events: none;}
-
-        /* MACHINE VISUAL */
-        .machine-viz {
-            margin-bottom: 50px; text-align: center;
-        }
-        .fan {
-            width: 120px; height: 120px; border: 5px solid #bdc3c7; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; margin: 0 auto;
-            background: #2f3542;
-        }
-        .blade { width: 110px; height: 15px; background: silver; position: absolute; border-radius: 50%; }
-        .blade:nth-child(1) { transform: rotate(0deg); }
-        .blade:nth-child(2) { transform: rotate(120deg); }
-        .blade:nth-child(3) { transform: rotate(240deg); }
+        .screen { display: none; height: 100%; width: 100%; }
+        .screen.active { display: block; }
         
-        .spinning { animation: spin 0.2s linear infinite; }
-        .coasting { animation: spin 3s ease-out forwards; }
+        /* Tab Views inside Student Screen */
+        .tab-view {
+            display: none; height: 100%; padding: 20px; box-sizing: border-box;
+            flex-direction: column; align-items: center; justify-content: center;
+            animation: fadeIn 0.4s;
+        }
+        .tab-view.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- COMPONENT STYLES --- */
+        /* Login */
+        .login-box {
+            text-align: center; background: white; color: #333; padding: 40px; border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        
+        /* Instructor Panel */
+        .inst-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; height: 100%; padding: 20px; }
+        .inst-card { background: rgba(0,0,0,0.2); border: 1px solid #555; padding: 20px; border-radius: 8px; overflow-y: auto;}
+
+        /* Simulation Visuals */
+        .fan-container {
+            width: 250px; height: 250px; border: 10px solid #7f8c8d; border-radius: 50%;
+            background: #222; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+        }
+        .blade { width: 220px; height: 25px; background: silver; position: absolute; border-radius: 12px; }
+        .spin { animation: spin 0.2s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* DECISION BAR */
-        .decision-bar {
-            position: absolute; bottom: 0; width: 100%;
-            background: rgba(0,0,0,0.8); padding: 15px;
-            display: flex; justify-content: center; gap: 20px;
-            transform: translateY(100%); transition: 0.3s;
+        /* Panel CBs */
+        .panel-board {
+            display: flex; gap: 20px; background: #bdc3c7; padding: 30px; border-radius: 10px; border: 5px solid #2c3e50;
         }
-        .decision-bar.active { transform: translateY(0); }
-
-        /* MODALS */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2000; display: none;
-            align-items: center; justify-content: center;
+        .cb-mod {
+            width: 100px; height: 200px; background: #34495e; border-radius: 4px; position: relative;
+            display: flex; flex-direction: column; align-items: center; border: 2px solid #2c3e50;
         }
-        .modal-content { background: white; padding: 20px; border-radius: 8px; color: #333; max-width: 600px; text-align: center;}
-        
-        .diagram-img { width: 100%; height: auto; border: 2px solid #333; margin: 10px 0; }
+        .switch-handle {
+            width: 70px; height: 60px; background: var(--danger); margin-top: 40px; cursor: pointer;
+            border-radius: 4px; transition: 0.3s; z-index: 5;
+            display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;
+        }
+        .switch-handle.off { transform: translateY(60px); background: var(--success); }
+        .drop-target {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
+        }
 
-        /* NOTIFICATION POPUP */
+        /* Items Visuals */
+        .visual-lock { position: absolute; top: 30px; left: 25px; font-size: 3rem; pointer-events: none; z-index: 20; filter: drop-shadow(2px 2px 2px black);}
+        .visual-tag { position: absolute; top: 60px; left: 30px; font-size: 2.5rem; pointer-events: none; z-index: 21; filter: drop-shadow(2px 2px 2px black); transform: rotate(-10deg);}
+
+        /* Toast */
         .toast {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--blue); color: white; padding: 10px 20px; border-radius: 30px;
-            z-index: 3000; opacity: 0; transition: 0.5s; pointer-events: none;
+            position: fixed; bottom: 20px; right: 20px; 
+            background: #333; border-left: 5px solid var(--primary); color: white;
+            padding: 15px 25px; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateX(200%); transition: 0.3s; z-index: 2000;
         }
+        .toast.active { transform: translateX(0); }
+
     </style>
 </head>
 <body>
 
-    <div id="role-switcher" onclick="switchView()">🔄 Chuyển Màn Hình</div>
+    <div class="header">
+        <div style="font-weight: bold; letter-spacing: 1px;">LOTO TRAINING <span class="app-ver">Ver 1.4</span></div>
+        <div id="user-display" style="font-size: 0.9rem; opacity: 0.8;">Guest</div>
+    </div>
 
-    <div id="toast" class="toast">Thông báo...</div>
+    <div id="toast" class="toast">Thông báo hệ thống</div>
 
-    <div id="login-screen" class="screen active">
-        <h1 style="color:white; text-transform: uppercase; letter-spacing: 2px;">Mô Phỏng An Toàn LOTO v1.2</h1>
-        <button class="login-btn" onclick="handleLogin()">
-            <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z"/></svg>
-            Đăng nhập với Google
-        </button>
-        <p style="margin-top:20px; font-size: 0.8rem; opacity: 0.7;">Giảng viên: deptc.gvatvsld@gmail.com</p>
+    <div id="login-screen" class="screen active" style="display: flex; align-items: center; justify-content: center;">
+        <div class="login-box">
+            <h1 style="color:#2c3e50; margin-top:0;">ĐĂNG NHẬP</h1>
+            <p>Chọn phương thức để bắt đầu bài học LOTO</p>
+            <button onclick="authLogin()" style="padding:12px 25px; background: #e74c3c; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 30px; font-size: 1rem;">
+                Login with Google
+            </button>
+            <p style="margin-top:20px; font-size:0.8rem; color:#7f8c8d;">Giảng viên: deptc.gvatvsld@gmail.com</p>
+        </div>
     </div>
 
     <div id="instructor-screen" class="screen">
-        <h2 style="border-bottom: 2px solid var(--warning); padding-bottom: 10px;">BẢNG ĐIỀU KHIỂN GIẢNG VIÊN</h2>
-        <div class="inst-controls">
-            <div class="inst-panel">
-                <h3>Trạng thái bài tập</h3>
-                <p>Học viên: <span id="inst-student-name">...</span></p>
-                <p>Nguồn điện CB-2 (Motor): <span id="inst-cb2-status" style="color:red">ON</span></p>
-                <p>Khóa LOTO: <span id="inst-lock-status">Chưa khóa</span></p>
-                <hr>
-                <button onclick="triggerDecision()" style="width:100%; padding: 10px; background: var(--blue); color: white; border: none; cursor: pointer; border-radius: 4px;">🔔 Yêu cầu Học viên Đánh giá</button>
-                <br><br>
-                <button onclick="resetSim()" style="width:100%; padding: 10px; background: var(--danger); color: white; border: none; cursor: pointer; border-radius: 4px;">⚠️ Reset Bài Tập</button>
-            </div>
-            <div class="inst-panel" id="inst-logs">
-                <div style="font-family: monospace; color: #2ed573;">> Hệ thống sẵn sàng...</div>
+        <div class="main-container" style="margin-left:0; padding: 60px 20px 20px 20px;">
+            <div class="inst-grid">
+                <div class="inst-card">
+                    <h3 style="color: var(--primary); margin-top:0;">ĐIỀU KHIỂN LỚP HỌC</h3>
+                    <p>Chuyển màn hình học viên đến:</p>
+                    <button class="sb-item active" onclick="forceTab('tab-device')" style="border: 1px solid #555; margin-bottom: 5px; border-radius: 4px;">🏭 Khu Vực Máy</button>
+                    <button class="sb-item active" onclick="forceTab('tab-electrical')" style="border: 1px solid #555; margin-bottom: 5px; border-radius: 4px;">⚡ Tủ Điện (CB)</button>
+                    <button class="sb-item active" onclick="forceTab('tab-diagram')" style="border: 1px solid #555; margin-bottom: 5px; border-radius: 4px;">🗺️ Sơ Đồ Điện</button>
+                    
+                    <hr style="border-color: #555; margin: 20px 0;">
+                    <button onclick="location.reload()" style="width:100%; padding:10px; background:var(--danger); color:white; border:none; font-weight:bold; cursor:pointer;">RESET SIMULATION</button>
+                </div>
+                <div class="inst-card" id="inst-logs">
+                    <h3 style="color: var(--success); margin-top:0;">NHẬT KÝ THAO TÁC</h3>
+                    </div>
             </div>
         </div>
+        <button onclick="toggleView()" style="position:fixed; bottom:20px; left:20px; z-index:9999; padding:10px;">👁️ Xem màn hình Học viên</button>
     </div>
 
     <div id="student-screen" class="screen">
         
         <div class="sidebar">
-            <div class="sidebar-title">HỘP DỤNG CỤ</div>
             
-            <div class="tool-item" onclick="useSpeaker()">
-                <div class="tool-icon">📢</div>
-                <div class="tool-label">Loa thông báo</div>
-            </div>
-
-            <div class="tool-item" onclick="showDiagram()">
-                <div class="tool-icon">🗺️</div>
-                <div class="tool-label">Sơ đồ cấp điện</div>
-            </div>
-
-            <hr style="width: 80%; border-color: #57606f;">
-
-            <div class="tool-item" draggable="true" ondragstart="drag(event)" id="tool-lock">
-                <div class="tool-icon">🔒</div>
-                <div class="tool-label">Ổ khóa an toàn</div>
-            </div>
-
-            <div class="tool-item" draggable="true" ondragstart="drag(event)" id="tool-tag">
-                <div class="tool-icon">🏷️</div>
-                <div class="tool-label">Thẻ cảnh báo</div>
-            </div>
-
-            <div class="tool-item" draggable="true" ondragstart="drag(event)" id="tool-meter">
-                <div class="tool-icon">⚡</div>
-                <div class="tool-label">Đồng hồ VOM</div>
-            </div>
-
-            <div class="tool-item" draggable="true" ondragstart="drag(event)" id="tool-pen">
-                <div class="tool-icon">🖍️</div>
-                <div class="tool-label">Bút thử điện</div>
-            </div>
-        </div>
-
-        <div class="workspace">
-            <div style="position: absolute; top: 10px; right: 20px; text-align: right;">
-                <small id="user-display">Học viên</small>
-                <br>
-                <button onclick="toggleDecisionBar()" style="margin-top: 5px; background: #333; color: white; border: 1px solid white; cursor: pointer;">Mở Menu Quyết Định</button>
-            </div>
-
-            <div class="machine-viz">
-                <h3 style="margin-bottom: 5px;">QUẠT HÚT SỐ 2</h3>
-                <div class="fan">
-                    <div class="blade spinning" id="blade1"></div>
-                    <div class="blade spinning" id="blade2"></div>
-                    <div class="blade spinning" id="blade3"></div>
-                </div>
-                <div style="margin-top: 10px;">
-                    <button onclick="operateMachine(true)" style="background:var(--success); border:none; padding:5px 15px; cursor:pointer;">START</button>
-                    <button onclick="operateMachine(false)" style="background:var(--danger); border:none; padding:5px 15px; cursor:pointer; color:white;">STOP</button>
-                </div>
-            </div>
-
-            <div class="panel-box">
-                <div class="panel-label">TỦ ĐIỆN PHÂN PHỐI DB-01</div>
+            <div class="sb-group">
+                <div class="sb-title">Khu Vực (Navigation)</div>
                 
-                <div class="cb-unit" id="cb1" ondragover="allowDrop(event)" ondrop="drop(event, 1)">
-                    <div class="cb-name">CB-01 (Đèn)</div>
-                    <div class="cb-handle" onclick="toggleCB(1)">ON</div>
-                    <div class="cb-hole"></div>
-                    <div id="lock-zone-1"></div>
+                <button class="sb-item active" onclick="switchTab('tab-device')" id="nav-device">
+                    <div class="sb-icon">🏭</div>
+                    <div class="sb-label">Máy Móc (Device)</div>
+                </button>
+
+                <button class="sb-item" onclick="switchTab('tab-electrical')" id="nav-electrical">
+                    <div class="sb-icon">⚡</div>
+                    <div class="sb-label">Tủ Điện (Panel)</div>
+                </button>
+
+                <button class="sb-item" onclick="switchTab('tab-diagram')" id="nav-diagram">
+                    <div class="sb-icon">🗺️</div>
+                    <div class="sb-label">Sơ Đồ (Diagram)</div>
+                </button>
+
+                <button class="sb-item" onclick="switchTab('tab-store')" id="nav-store">
+                    <div class="sb-icon">📋</div>
+                    <div class="sb-label">Kho (Inventory)</div>
+                </button>
+            </div>
+
+            <div class="sb-group" style="flex-grow: 1;">
+                <div class="sb-title">Túi Đồ Nghề (Tools)</div>
+
+                <div class="sb-item draggable-item" draggable="true" ondragstart="drag(event)" id="tool-lock">
+                    <div class="sb-icon">🔒</div>
+                    <div class="sb-label">Ổ Khóa (Lock)</div>
                 </div>
 
-                <div class="cb-unit" id="cb2" ondragover="allowDrop(event)" ondrop="drop(event, 2)">
-                    <div class="cb-name">CB-02 (Quạt)</div>
-                    <div class="cb-handle" onclick="toggleCB(2)">ON</div>
-                    <div class="cb-hole"></div>
-                    <div id="lock-zone-2"></div>
+                <div class="sb-item draggable-item" draggable="true" ondragstart="drag(event)" id="tool-tag">
+                    <div class="sb-icon">🏷️</div>
+                    <div class="sb-label">Thẻ (Tag)</div>
                 </div>
 
-                <div class="cb-unit" id="cb3" ondragover="allowDrop(event)" ondrop="drop(event, 3)">
-                    <div class="cb-name">CB-03 (Ổ cắm)</div>
-                    <div class="cb-handle" onclick="toggleCB(3)">ON</div>
-                    <div class="cb-hole"></div>
-                    <div id="lock-zone-3"></div>
+                <div class="sb-item draggable-item" draggable="true" ondragstart="drag(event)" id="tool-meter">
+                    <div class="sb-icon">⚡</div>
+                    <div class="sb-label">Đồng hồ (VOM)</div>
+                </div>
+
+                <div class="sb-item draggable-item" draggable="true" ondragstart="drag(event)" id="tool-speaker" onclick="actionNotify()">
+                    <div class="sb-icon">📢</div>
+                    <div class="sb-label">Loa Thông Báo</div>
                 </div>
             </div>
         </div>
 
-        <div class="decision-bar" id="decision-bar">
-            <button onclick="makeDecision('redo')" style="background: var(--warning); border:none; padding: 10px 20px; font-weight: bold; cursor: pointer;">⏪ LÀM LẠI (Không an toàn)</button>
-            <button onclick="makeDecision('continue')" style="background: var(--metal); border:none; padding: 10px 20px; color: white; cursor: pointer;">▶️ TIẾP TỤC THAO TÁC</button>
-            <button onclick="makeDecision('permit')" style="background: var(--blue); border:none; padding: 10px 20px; color: white; font-weight: bold; cursor: pointer;">📝 CHO PHÉP LÀM VIỆC</button>
-        </div>
-    </div>
+        <div class="main-container">
+            
+            <div id="tab-device" class="tab-view active">
+                <h2 style="border-bottom: 2px solid var(--primary); padding-bottom:10px;">KHU VỰC SẢN XUẤT: QUẠT SỐ 2</h2>
+                <div class="fan-container">
+                    <div class="blade spin" id="fan-blades"></div>
+                    <div class="blade spin" style="transform: rotate(120deg);"></div>
+                    <div class="blade spin" style="transform: rotate(240deg);"></div>
+                </div>
+                <div style="text-align:center;">
+                    <div id="status-text" style="font-size:1.5rem; font-weight:bold; color:var(--success); margin-bottom:15px;">ĐANG CHẠY</div>
+                    <button onclick="machineControl(true)" style="padding:10px 30px; background:var(--success); border:none; color:white; font-weight:bold; cursor:pointer; margin-right:10px;">START</button>
+                    <button onclick="machineControl(false)" style="padding:10px 30px; background:var(--danger); border:none; color:white; font-weight:bold; cursor:pointer;">STOP</button>
+                </div>
+            </div>
 
-    <div id="modal-diagram" class="modal-overlay" onclick="this.style.display='none'">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3>SƠ ĐỒ ĐƠN TUYẾN DB-01</h3>
-            <svg class="diagram-img" viewBox="0 0 400 200" style="background: white;">
-                <rect x="10" y="10" width="380" height="180" fill="none" stroke="black"/>
-                <line x1="20" y1="100" x2="100" y2="100" stroke="red" stroke-width="4"/>
-                <text x="30" y="90" fill="red">NGUỒN 380V</text>
-                
-                <line x1="100" y1="50" x2="100" y2="150" stroke="black" stroke-width="4"/>
+            <div id="tab-electrical" class="tab-view">
+                <h2 style="border-bottom: 2px solid var(--primary); padding-bottom:10px;">TỦ ĐIỆN PHÂN PHỐI DB-01</h2>
+                <div class="panel-board">
+                    <div class="cb-mod">
+                        <span style="color:#ccc; margin-top:5px; font-size:0.8rem;">CB-01 (Đèn)</span>
+                        <div class="switch-handle" onclick="toggleSwitch(1, this)">ON</div>
+                        <div class="drop-target" id="zone-1" ondragover="allowDrop(event)" ondrop="drop(event, 1)"></div>
+                    </div>
+                    <div class="cb-mod" style="border-color: var(--primary);">
+                        <span style="color:var(--primary); margin-top:5px; font-weight:bold;">CB-02 (Quạt)</span>
+                        <div class="switch-handle" id="handle-2" onclick="toggleSwitch(2, this)">ON</div>
+                        <div class="drop-target" id="zone-2" ondragover="allowDrop(event)" ondrop="drop(event, 2)"></div>
+                    </div>
+                    <div class="cb-mod">
+                        <span style="color:#ccc; margin-top:5px; font-size:0.8rem;">CB-03 (Socket)</span>
+                        <div class="switch-handle" onclick="toggleSwitch(3, this)">ON</div>
+                        <div class="drop-target" id="zone-3" ondragover="allowDrop(event)" ondrop="drop(event, 3)"></div>
+                    </div>
+                </div>
+                <p style="margin-top:20px; color:#bdc3c7;">*Mở Sidebar bên trái để lấy dụng cụ khóa/thẻ.</p>
+            </div>
 
-                <line x1="100" y1="60" x2="200" y2="60" stroke="black" stroke-width="2"/>
-                <rect x="200" y="50" width="40" height="20" fill="white" stroke="black"/>
-                <text x="250" y="65" font-size="12">CB-01 (Chiếu sáng)</text>
+            <div id="tab-diagram" class="tab-view">
+                <h2 style="border-bottom: 2px solid var(--primary); padding-bottom:10px;">SƠ ĐỒ NGUYÊN LÝ</h2>
+                <div style="background:white; padding:20px; border-radius:8px;">
+                    <svg width="500" height="300" viewBox="0 0 500 300">
+                        <rect x="10" y="10" width="480" height="280" fill="none" stroke="black"/>
+                        <text x="30" y="40" font-weight="bold">NGUỒN TỔNG 380V</text>
+                        <line x1="50" y1="50" x2="50" y2="250" stroke="red" stroke-width="5"/>
+                        
+                        <line x1="50" y1="150" x2="200" y2="150" stroke="black" stroke-width="2"/>
+                        <rect x="200" y="130" width="50" height="40" fill="none" stroke="blue" stroke-width="2"/>
+                        <text x="210" y="155" fill="blue" font-weight="bold">CB-02</text>
+                        <line x1="250" y1="150" x2="350" y2="150" stroke="black" stroke-width="2"/>
+                        <circle cx="380" cy="150" r="20" fill="#333"/>
+                        <text x="360" y="190" font-weight="bold">MOTOR QUẠT</text>
+                    </svg>
+                </div>
+            </div>
 
-                <line x1="100" y1="100" x2="200" y2="100" stroke="black" stroke-width="2"/>
-                <rect x="200" y="90" width="40" height="20" fill="white" stroke="red" stroke-width="2"/>
-                <text x="250" y="105" font-size="12" font-weight="bold" fill="red">CB-02 (QUẠT SỐ 2)</text>
+            <div id="tab-store" class="tab-view">
+                <h2 style="border-bottom: 2px solid var(--primary); padding-bottom:10px;">THÔNG TIN KHO DỤNG CỤ</h2>
+                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:20px;">
+                    <div style="background:rgba(255,255,255,0.1); padding:20px; border-radius:5px;">
+                        <h3>🔒 KHÓA AN TOÀN</h3>
+                        <p>Số lượng: 05 cái</p>
+                        <p>Vị trí: Kệ A1</p>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.1); padding:20px; border-radius:5px;">
+                        <h3>🏷️ THẺ CẢNH BÁO</h3>
+                        <p>Số lượng: 50 cái</p>
+                        <p>Vị trí: Ngăn kéo B2</p>
+                    </div>
+                </div>
+            </div>
 
-                <line x1="100" y1="140" x2="200" y2="140" stroke="black" stroke-width="2"/>
-                <rect x="200" y="130" width="40" height="20" fill="white" stroke="black"/>
-                <text x="250" y="145" font-size="12">CB-03 (Ổ cắm)</text>
-            </svg>
-            <p>Xác nhận: <strong>CB-02</strong> cấp nguồn cho Quạt Hút số 2.</p>
-            <button onclick="document.getElementById('modal-diagram').style.display='none'" style="padding: 5px 20px;">Đóng</button>
         </div>
     </div>
 
@@ -337,227 +338,150 @@
         const firebaseConfig = { apiKey: "AIzaSyCzWjfcD5Dgq7V-i2izb9tKLR6QM6qWPQo", authDomain: "tavietnam-78ae8.firebaseapp.com", projectId: "tavietnam-78ae8", storageBucket: "tavietnam-78ae8.firebasestorage.app", messagingSenderId: "670121705534", appId: "1:670121705534:web:1027ad98550573ad37116f" };
         firebase.initializeApp(firebaseConfig);
 
-        // STATE
-        let role = 'student'; 
-        let cbs = {
-            1: { on: true, locked: false, tagged: false },
-            2: { on: true, locked: false, tagged: false }, // TARGET
-            3: { on: true, locked: false, tagged: false }
-        };
-        let steps = { notified: false, verified: false };
-        let motorRunning = true;
+        let role = 'student';
+        let state = { cb2: true, locked: false, tagged: false, running: true };
 
         // AUTH
-        function handleLogin() {
+        function authLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
-            firebase.auth().signInWithPopup(provider).then(res => {
-                checkRole(res.user);
-            }).catch(e => {
-                // Fallback for local testing without server
-                if(window.location.protocol === 'file:') {
-                    let email = prompt("Testing Mode. Enter email:", "deptc.gvatvsld@gmail.com");
-                    checkRole({email: email});
-                } else alert(e.message);
-            });
+            firebase.auth().signInWithPopup(provider)
+                .then(res => setRole(res.user))
+                .catch(err => {
+                    if(location.protocol === 'file:') setRole({email: prompt("Test email:", "deptc.gvatvsld@gmail.com")});
+                });
         }
 
-        function checkRole(user) {
+        function setRole(user) {
             document.getElementById('login-screen').classList.remove('active');
             document.getElementById('user-display').innerText = user.email;
             
-            if (user.email === 'deptc.gvatvsld@gmail.com') {
+            if(user.email === 'deptc.gvatvsld@gmail.com') {
                 role = 'instructor';
-                document.getElementById('role-switcher').style.display = 'block';
-                showScreen('instructor-screen');
+                document.getElementById('instructor-screen').classList.add('active');
             } else {
                 role = 'student';
-                showScreen('student-screen');
-                if(document.getElementById('inst-student-name')) 
-                    document.getElementById('inst-student-name').innerText = user.email;
+                document.getElementById('student-screen').classList.add('active');
             }
-            log(`Logged in as ${role}`);
         }
 
-        // NAVIGATION
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
-        function switchView() {
+        function toggleView() {
             if(role !== 'instructor') return;
-            const current = document.querySelector('.screen.active').id;
-            showScreen(current === 'instructor-screen' ? 'student-screen' : 'instructor-screen');
-        }
-
-        // TOOLBOX ACTIONS
-        function useSpeaker() {
-            steps.notified = true;
-            showToast("📢 Đã thông báo: 'Đề nghị ngừng vận hành để bảo trì!'");
-            log("Student used Speaker to Notify.");
-        }
-
-        function showDiagram() {
-            document.getElementById('modal-diagram').style.display = 'flex';
-            log("Student viewed Wiring Diagram.");
-        }
-
-        // MACHINE & CBS
-        function operateMachine(on) {
-            if(on && cbs[2].on) {
-                motorRunning = true;
-                updateFans();
+            const inst = document.getElementById('instructor-screen');
+            const stu = document.getElementById('student-screen');
+            if(inst.classList.contains('active')) {
+                inst.classList.remove('active'); stu.classList.add('active');
             } else {
-                motorRunning = false;
-                updateFans();
+                stu.classList.remove('active'); inst.classList.add('active');
             }
         }
 
-        function updateFans() {
-            const blades = document.querySelectorAll('.blade');
-            if(motorRunning) {
-                blades.forEach(b => { b.classList.remove('coasting'); b.classList.add('spinning'); });
-            } else {
-                blades.forEach(b => { b.classList.remove('spinning'); b.classList.add('coasting'); });
-            }
-        }
-
-        function toggleCB(id) {
-            if(cbs[id].locked) {
-                showToast("⛔ Không thể thao tác! CB đang bị KHÓA.");
-                return;
-            }
-            cbs[id].on = !cbs[id].on;
-            const handle = document.querySelector(`#cb${id} .cb-handle`);
+        // NAVIGATION LOGIC
+        function switchTab(tabId) {
+            // Update Tab
+            document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
             
-            if(cbs[id].on) {
-                handle.classList.remove('off'); handle.innerText = "ON";
-            } else {
-                handle.classList.add('off'); handle.innerText = "OFF";
-            }
-
-            // Logic logic: CB2 controls fan
-            if(id === 2 && cbs[id].on) operateMachine(true);
-            if(id === 2 && !cbs[id].on) operateMachine(false);
-
-            log(`Student toggled CB-${id} to ${cbs[id].on ? 'ON' : 'OFF'}`);
-            updateInstUI();
+            // Update Sidebar Active State
+            document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+            // Find nav button with ID 'nav-X' where X matches tabId suffix
+            const navId = 'nav-' + tabId.replace('tab-', '');
+            const btn = document.getElementById(navId);
+            if(btn) btn.classList.add('active');
+            
+            log(`Chuyển màn hình: ${tabId}`);
         }
 
-        // DRAG & DROP
+        // INSTRUCTOR FORCE
+        function forceTab(tabId) {
+            switchTab(tabId);
+            notify("Giảng viên yêu cầu chuyển màn hình.");
+        }
+
+        // SIMULATION LOGIC
+        function machineControl(on) {
+            if(on && state.cb2) {
+                state.running = true;
+                document.getElementById('fan-blades').style.animation = 'spin 0.2s linear infinite';
+                document.getElementById('status-text').innerText = 'ĐANG CHẠY';
+                document.getElementById('status-text').style.color = '#4cd137';
+            } else {
+                state.running = false;
+                document.getElementById('fan-blades').style.animation = 'none';
+                document.getElementById('status-text').innerText = 'ĐÃ DỪNG';
+                document.getElementById('status-text').style.color = '#bdc3c7';
+            }
+        }
+
+        function toggleSwitch(id, el) {
+            if(id === 2 && state.locked) {
+                notify("⛔ Đã khóa LOTO! Không thể thao tác."); return;
+            }
+            
+            if(el.classList.contains('off')) {
+                el.classList.remove('off'); el.innerText = "ON";
+                if(id === 2) { state.cb2 = true; machineControl(true); }
+            } else {
+                el.classList.add('off'); el.innerText = "OFF";
+                if(id === 2) { state.cb2 = false; machineControl(false); }
+            }
+        }
+
+        // DRAG DROP
         function drag(ev) { ev.dataTransfer.setData("tool", ev.target.id); }
         function allowDrop(ev) { ev.preventDefault(); }
         
-        function drop(ev, cbId) {
+        function drop(ev, zoneId) {
             ev.preventDefault();
             const tool = ev.dataTransfer.getData("tool");
-            const zone = document.getElementById(`lock-zone-${cbId}`);
-
+            const zone = document.getElementById(`zone-${zoneId}`);
+            
             if(tool === 'tool-lock') {
-                if(cbs[cbId].on) { showToast("⚡ NGUY HIỂM! Không thể khóa khi CB đang ON."); return; }
-                if(cbs[cbId].locked) return;
-                cbs[cbId].locked = true;
-                zone.innerHTML += `<svg class="deployed-lock" viewBox="0 0 100 120"><rect x="20" y="40" width="60" height="70" rx="5" fill="#ff4757"/><path d="M30,40 V25 A20,20 0 0,1 70,25 V40" fill="none" stroke="silver" stroke-width="8"/></svg>`;
-                log(`Locked CB-${cbId}`);
+                if(zoneId === 2) {
+                    if(state.cb2) { notify("⚡ NGUY HIỂM! Cắt điện trước khi khóa."); return; }
+                    if(state.locked) return;
+                    state.locked = true;
+                    zone.innerHTML += `<div class="visual-lock">🔒</div>`;
+                    notify("✅ Đã khóa an toàn.");
+                    log("Học viên đã khóa CB-02");
+                } else {
+                    notify("⚠️ Sai vị trí! Kiểm tra sơ đồ.");
+                }
             }
             else if(tool === 'tool-tag') {
-                if(!cbs[cbId].locked) { showToast("⚠️ Phải khóa trước khi treo thẻ!"); return; }
-                cbs[cbId].tagged = true;
-                zone.innerHTML += `<svg class="deployed-tag" viewBox="0 0 80 120"><path d="M0,20 L80,20 L80,120 L0,120 Z" fill="#f1f2f6"/><rect x="10" y="30" width="60" height="20" fill="red"/><text x="40" y="45" font-size="10" text-anchor="middle" fill="white">DANGER</text></svg>`;
-                log(`Tagged CB-${cbId}`);
+                if(zoneId === 2 && state.locked && !state.tagged) {
+                    state.tagged = true;
+                    zone.innerHTML += `<div class="visual-tag">🏷️</div>`;
+                    notify("✅ Đã treo thẻ.");
+                } else if (!state.locked) {
+                    notify("⚠️ Phải khóa trước khi treo thẻ.");
+                }
             }
-            else if(tool === 'tool-meter' || tool === 'tool-pen') {
-                // Verify
-                showToast("⏳ Đang kiểm tra điện áp...");
+            else if(tool === 'tool-meter') {
+                notify("⏳ Đang đo điện áp...");
                 setTimeout(() => {
-                    if(cbs[cbId].on) {
-                        showToast("⚡ CẢNH BÁO: CÓ ĐIỆN (380V)!");
-                        if(tool==='tool-pen') playBeep();
-                    } else {
-                        showToast("✅ AN TOÀN: 0V");
-                        if(cbId === 2) steps.verified = true;
-                    }
+                    const voltage = (zoneId === 2 && state.cb2) ? "380V" : "0V";
+                    notify(`Kết quả đo: ${voltage}`);
                 }, 1000);
-                log(`Verified CB-${cbId} with ${tool}`);
-            }
-            updateInstUI();
-        }
-
-        // DECISION WORKFLOW
-        function toggleDecisionBar() {
-            document.getElementById('decision-bar').classList.toggle('active');
-        }
-
-        function triggerDecision() {
-            // Called by Instructor
-            showToast("🔔 GIẢNG VIÊN YÊU CẦU: Hãy kiểm tra và đưa ra quyết định!");
-            document.getElementById('decision-bar').classList.add('active');
-        }
-
-        function makeDecision(choice) {
-            document.getElementById('decision-bar').classList.remove('active');
-            if(choice === 'redo') {
-                if(confirm("Bạn muốn làm lại từ đầu?")) resetSim();
-            } else if (choice === 'continue') {
-                // Just close bar
-            } else if (choice === 'permit') {
-                evaluateSafety();
             }
         }
 
-        function evaluateSafety() {
-            // Check Criticals: Notified? CB2 Off? CB2 Locked? CB2 Tagged? Verified?
-            if(!steps.notified) { alert("LỖI: Bạn chưa Thông báo (Bước 1)."); return; }
-            if(cbs[2].on) { alert("TAI NẠN: CB-02 (Quạt) vẫn đang bật!"); return; }
-            if(!cbs[2].locked) { alert("NGUY HIỂM: Bạn chưa khóa CB-02."); return; }
-            if(!steps.verified) { alert("LỖI: Bạn chưa đo kiểm tra điện áp."); return; }
-            
-            // Correct target check
-            if(cbs[1].locked || cbs[3].locked) { 
-                alert("CẢNH BÁO: Bạn đã khóa nhầm CB không liên quan (Sử dụng sơ đồ để kiểm tra lại).");
-                return;
-            }
-
-            alert("✅ XUẤT SẮC! Bạn đã cô lập năng lượng an toàn và đúng quy trình.");
-            log("Student PASSED.");
+        function actionNotify() {
+            notify("📢 Đã phát loa thông báo toàn xưởng.");
+            log("Học viên phát thông báo.");
         }
 
         // UTILS
-        function showToast(msg) {
+        function notify(msg) {
             const t = document.getElementById('toast');
-            t.innerText = msg; t.style.opacity = 1;
-            setTimeout(() => t.style.opacity = 0, 3000);
+            t.innerText = msg; t.classList.add('active');
+            setTimeout(() => t.classList.remove('active'), 3000);
         }
 
         function log(msg) {
-            const time = new Date().toLocaleTimeString();
-            console.log(msg);
-            if(role === 'instructor' || document.getElementById('inst-logs')) {
-                const logs = document.getElementById('inst-logs');
-                logs.innerHTML += `<div>[${time}] ${msg}</div>`;
-                logs.scrollTop = logs.scrollHeight;
-            }
+            const box = document.getElementById('inst-logs');
+            if(box) box.innerHTML += `<div>> ${msg}</div>`;
         }
 
-        function updateInstUI() {
-            if(document.getElementById('inst-cb2-status')) {
-                const stat = document.getElementById('inst-cb2-status');
-                stat.innerText = cbs[2].on ? "ON (Nguy hiểm)" : "OFF";
-                stat.style.color = cbs[2].on ? "red" : "green";
-
-                const lock = document.getElementById('inst-lock-status');
-                lock.innerText = cbs[2].locked ? "Đã khóa" : "Chưa khóa";
-            }
-        }
-
-        function resetSim() {
-            location.reload();
-        }
-
-        function playBeep() {
-            // Simple beep context (optional)
-            // const ctx = new AudioContext(); ...
-        }
     </script>
 </body>
 </html>

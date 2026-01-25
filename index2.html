@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LOTO Platform v2.0</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #2f3640;
+            --primary: #00a8ff;
+            --danger: #e84118;
+            --success: #4cd137;
+            --warning: #f1c40f;
+            --text: #f5f6fa;
+            --header-h: 56px;
+            --sidebar-w: 85%;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden; touch-action: manipulation;
+        }
+
+        /* --- HEADER --- */
+        .header {
+            height: var(--header-h); background: #1e272e;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; border-bottom: 2px solid #444;
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        #btn-menu { background: transparent; border: none; color: white; font-size: 1.8rem; padding: 10px; cursor: pointer; }
+        .app-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
+
+        /* --- DOMAIN SELECTOR SCREEN (NEW) --- */
+        .domain-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            padding: 20px; max-width: 600px; margin: 0 auto;
+        }
+        .domain-card {
+            background: #353b48; border: 2px solid #444; border-radius: 12px;
+            padding: 20px; text-align: center; cursor: pointer; transition: 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 150px;
+        }
+        .domain-card:active { transform: scale(0.98); border-color: var(--primary); background: #2f3640; }
+        .domain-icon { font-size: 3rem; margin-bottom: 10px; }
+        .domain-title { font-weight: bold; color: var(--text); }
+        .domain-desc { font-size: 0.8rem; color: #aaa; margin-top: 5px; }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            position: fixed; top: var(--header-h); bottom: 0; left: -100%;
+            width: var(--sidebar-w); background: #222;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 3000; overflow-y: auto; border-right: 1px solid #444;
+        }
+        .sidebar.active { left: 0; }
+        .menu-header { padding: 15px 20px 5px; font-size: 0.75rem; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
+        .menu-item { padding: 15px 20px; display: flex; align-items: center; gap: 15px; color: #ecf0f1; border-bottom: 1px solid #2f3640; cursor: pointer; font-size: 1rem; }
+        .menu-item:active { background: rgba(255,255,255,0.1); }
+        .menu-item.active { background: rgba(0,168,255,0.15); border-left: 5px solid var(--primary); }
+        .tool-icon { font-size: 1.4rem; width: 30px; text-align: center; }
+
+        /* --- CONTENT & VISUALS --- */
+        .main-content { margin-top: var(--header-h); height: calc(100vh - var(--header-h)); overflow-y: auto; position: relative; }
+        .tab-view { display: none; padding: 20px; flex-direction: column; align-items: center; min-height: 100%; }
+        .tab-view.show { display: flex; }
+        .card { background: #353b48; border-radius: 12px; padding: 20px; width: 100%; box-sizing: border-box; margin-bottom: 20px; text-align: center; position: relative; z-index: 1;}
+
+        /* Electrical Specifics */
+        .cb-unit { background: #2f3640; border: 2px solid #555; border-radius: 8px; height: 160px; position: relative; display: flex; flex-direction: column; align-items: center; }
+        .cb-lever { width: 50px; height: 40px; background: var(--danger); margin-top: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; transition: 0.3s; }
+        .cb-lever.off { transform: translateY(50px); background: var(--success); }
+
+        /* Chemical Specifics (NEW) */
+        .pipe-system { position: relative; width: 100%; height: 200px; background: #222; border-radius: 8px; border: 1px solid #555; margin-bottom: 10px; overflow: hidden; }
+        .pipe { position: absolute; background: #7f8c8d; }
+        .pipe-h { height: 10px; top: 100px; left: 0; width: 100%; }
+        .pipe.flow { background: #00a8ff; animation: flowPulse 1s infinite; } /* Hiệu ứng dòng chảy */
+        
+        .valve-unit { 
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            width: 40px; height: 50px; cursor: pointer; z-index: 10;
+        }
+        .valve-handle {
+            width: 40px; height: 10px; background: var(--danger); border-radius: 5px;
+            transition: transform 0.3s;
+        }
+        .valve-body { width: 20px; height: 20px; background: silver; margin: 0 auto; margin-top: -5px; }
+        /* Valve Vertical = CLOSED */
+        .valve-handle.closed { transform: rotate(90deg); background: var(--success); }
+
+        .tank { position: absolute; right: 10px; top: 60px; width: 60px; height: 80px; border: 2px solid #aaa; border-radius: 5px; background: rgba(255,255,255,0.1); }
+        .liquid { position: absolute; bottom: 0; left: 0; width: 100%; height: 80%; background: #00a8ff; transition: height 2s; opacity: 0.7;}
+
+        @keyframes flowPulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+        /* Overlays */
+        .backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2500; display: none; }
+        .backdrop.show { display: block; }
+        #active-tool-hud { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); border: 2px solid var(--primary); padding: 10px 20px; border-radius: 50px; display: none; align-items: center; gap: 10px; z-index: 1500; }
+        #active-tool-hud.show { display: flex; }
+        
+        /* Visuals for Lock/Tag on Valve/CB */
+        .viz-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; display: flex; align-items: center; justify-content: center; }
+        .viz-lock { font-size: 2rem; filter: drop-shadow(2px 2px 2px black); }
+        .viz-tag { font-size: 1.5rem; transform: rotate(-10deg) translate(10px, 10px); }
+
+        .btn { padding: 15px; width: 100%; border: none; border-radius: 8px; font-weight: bold; color: white; margin-top: 10px; font-size: 1rem; }
+        .btn-success { background: var(--success); color: #222; }
+        
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(50,50,50,0.95); color: white; padding: 12px 20px; border-radius: 50px; font-size: 0.9rem; opacity: 0; transition: 0.3s; z-index: 5000; white-space: nowrap; }
+        .toast.show { opacity: 1; bottom: 40px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div style="display: flex; align-items: center;">
+            <button id="btn-menu" onclick="toggleSidebar()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+            <div class="app-title">LOTO Platform v2.0</div>
+        </div>
+        <div style="font-size:0.8rem; color:#ccc;" id="domain-label">Trang Chủ</div>
+    </div>
+
+    <div id="active-tool-hud">
+        <div style="font-size:1.5rem" id="hud-icon">🔧</div>
+        <div style="font-weight:bold; color:white; font-size:0.9rem" id="hud-text">...</div>
+        <div style="margin-left:10px; background:#e74c3c; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center;" onclick="clearTool()">✕</div>
+    </div>
+    <div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
+    <div id="toast" class="toast">...</div>
+
+    <div id="screen-login" class="tab-view show" style="justify-content: center; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1000; background: #2f3640;">
+        <div class="card" style="max-width: 350px;">
+            <h2 style="color:var(--primary)">HỆ THỐNG ĐÀO TẠO</h2>
+            <button class="btn btn-success" onclick="doLogin()" style="background:#e74c3c; color:white;">Đăng nhập Google</button>
+        </div>
+    </div>
+
+    <div id="screen-domain" class="tab-view" style="padding-top: 80px;">
+        <h2 style="color:white; margin-bottom:20px;">CHỌN MÔ-ĐUN THỰC HÀNH</h2>
+        
+        <div class="domain-grid">
+            <div class="domain-card" onclick="loadDomain('electrical')">
+                <div class="domain-icon">⚡</div>
+                <div class="domain-title">An Toàn Điện</div>
+                <div class="domain-desc">Cô lập CB, Motor, Khóa hãm</div>
+            </div>
+
+            <div class="domain-card" onclick="loadDomain('chemical')">
+                <div class="domain-icon">🧪</div>
+                <div class="domain-title">Hóa Chất / Lỏng</div>
+                <div class="domain-desc">Khóa Van, Xả áp, Bồn chứa</div>
+            </div>
+
+            <div class="domain-card" style="opacity: 0.5;">
+                <div class="domain-icon">⚙️</div>
+                <div class="domain-title">Cơ Khí</div>
+                <div class="domain-desc">Sắp ra mắt</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-sim" class="main-content" style="display:none;">
+        </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="menu-group">
+            <div class="menu-header">Điều Hướng</div>
+            <div class="menu-item" onclick="goHome()">🏠 Về trang chọn Lĩnh Vực</div>
+        </div>
+        
+        <div id="dynamic-menu-content">
+            </div>
+    </div>
+
+    <script>
+        // CONFIG
+        const firebaseConfig = { apiKey: "AIzaSyCzWjfcD5Dgq7V-i2izb9tKLR6QM6qWPQo", authDomain: "tavietnam-78ae8.firebaseapp.com", projectId: "tavietnam-78ae8", storageBucket: "tavietnam-78ae8.firebasestorage.app", messagingSenderId: "670121705534", appId: "1:670121705534:web:1027ad98550573ad37116f" };
+        firebase.initializeApp(firebaseConfig);
+
+        // STATE
+        let currentDomain = null; // 'electrical' or 'chemical'
+        let currentTool = null;
+        // Data Store for simulation state
+        let simData = {
+            electrical: { mainCB: true, locked: false, tagged: false },
+            chemical: { valveOpen: true, locked: false, tagged: false, pressure: 100 }
+        };
+
+        // --- AUTH ---
+        function doLogin() {
+            const p = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(p).then(r => {
+                document.getElementById('screen-login').classList.remove('show');
+                document.getElementById('screen-domain').classList.add('show'); // Go to Selector
+            });
+        }
+
+        // --- DOMAIN LOADING LOGIC (THE CORE) ---
+        function loadDomain(domainType) {
+            currentDomain = domainType;
+            document.getElementById('screen-domain').classList.remove('show');
+            document.getElementById('screen-sim').style.display = 'block';
+            document.getElementById('domain-label').innerText = domainType === 'electrical' ? "Mô-đun Điện" : "Mô-đun Hóa Chất";
+
+            renderSimulation(domainType);
+            renderSidebar(domainType);
+        }
+
+        function goHome() {
+            document.getElementById('screen-sim').style.display = 'none';
+            document.getElementById('screen-domain').classList.add('show');
+            closeSidebar();
+        }
+
+        // --- RENDERING UI ---
+        function renderSidebar(type) {
+            const menu = document.getElementById('dynamic-menu-content');
+            let html = '<div class="menu-group"><div class="menu-header">Dụng Cụ LOTO</div>';
+            
+            // Common Tools
+            html += `<div class="menu-item" onclick="selectTool('lock')"><span class="tool-icon">🔒</span> Ổ Khóa</div>`;
+            html += `<div class="menu-item" onclick="selectTool('tag')"><span class="tool-icon">🏷️</span> Thẻ Cảnh Báo</div>`;
+            
+            // Specific Tools
+            if(type === 'electrical') {
+                html += `<div class="menu-item" onclick="selectTool('meter')"><span class="tool-icon">⚡</span> VOM (Đo điện)</div>`;
+            } else if (type === 'chemical') {
+                html += `<div class="menu-item" onclick="selectTool('cover')"><span class="tool-icon">⭕</span> Chụp Van (Valve Lock)</div>`;
+                html += `<div class="menu-item" onclick="selectTool('ppe')"><span class="tool-icon">🧤</span> Đồ bảo hộ Hóa chất</div>`;
+            }
+            
+            html += `</div>`;
+            menu.innerHTML = html;
+        }
+
+        function renderSimulation(type) {
+            const container = document.getElementById('screen-sim');
+            let html = '';
+
+            if (type === 'electrical') {
+                // RENDER ELECTRICAL SCENARIO
+                html = `
+                <div class="tab-view show">
+                    <div class="card">
+                        <h3 style="color:var(--primary)">TỦ ĐIỆN ĐIỀU KHIỂN</h3>
+                        <div style="display:flex; justify-content:center;">
+                            <div class="cb-unit" style="width:120px;" onclick="interactTarget()">
+                                <span style="margin-top:10px; font-size:0.8rem;">MOTOR PUMP</span>
+                                <div class="cb-lever ${simData.electrical.mainCB ? '' : 'off'}" id="elec-lever">ON</div>
+                                <div class="viz-overlay" id="elec-viz">
+                                    ${simData.electrical.locked ? '<div class="viz-lock">🔒</div>' : ''}
+                                    ${simData.electrical.tagged ? '<div class="viz-tag">🏷️</div>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>TRẠNG THÁI MÁY</h3>
+                        <div style="font-size:1.2rem; font-weight:bold; color:${simData.electrical.mainCB ? 'var(--success)' : '#ccc'}">
+                            ${simData.electrical.mainCB ? 'ĐANG CHẠY 🟢' : 'ĐÃ DỪNG ⚫'}
+                        </div>
+                    </div>
+                </div>`;
+            } else if (type === 'chemical') {
+                // RENDER CHEMICAL SCENARIO
+                const isFlowing = simData.chemical.valveOpen;
+                html = `
+                <div class="tab-view show">
+                    <div class="card">
+                        <h3 style="color:#e67e22">HỆ THỐNG ĐƯỜNG ỐNG AXIT</h3>
+                        <div class="pipe-system">
+                            <div class="pipe pipe-h ${isFlowing ? 'flow' : ''}" style="width:50%; left:0;"></div>
+                            <div class="pipe pipe-h ${isFlowing ? 'flow' : ''}" style="width:50%; right:0;"></div>
+                            <div class="tank"><div class="liquid" style="height:${isFlowing ? '80%' : '20%'}"></div></div>
+                            
+                            <div class="valve-unit" onclick="interactTarget()">
+                                <div class="valve-handle ${isFlowing ? '' : 'closed'}" id="chem-handle"></div>
+                                <div class="valve-body"></div>
+                                <div class="viz-overlay" id="chem-viz">
+                                    ${simData.chemical.locked ? '<div class="viz-lock" style="font-size:1.5rem">🔒</div>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <p style="font-size:0.8rem; color:#aaa">Nhiệm vụ: Khóa van nguồn trước khi sửa ống.</p>
+                    </div>
+                    <div class="card">
+                        <h3>CHỈ SỐ AN TOÀN</h3>
+                        <p>Lưu lượng: <strong style="color:${isFlowing?'red':'green'}">${isFlowing ? '150 L/min' : '0 L/min'}</strong></p>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        // --- INTERACTION LOGIC (POLYMORPHIC) ---
+        function interactTarget() {
+            if (currentDomain === 'electrical') {
+                handleElectricalInteraction();
+            } else if (currentDomain === 'chemical') {
+                handleChemicalInteraction();
+            }
+        }
+
+        // 1. Electrical Logic
+        function handleElectricalInteraction() {
+            const s = simData.electrical;
+            
+            if (currentTool === 'lock') {
+                if (s.mainCB) return showToast("⚡ Còn điện! Cắt CB trước.");
+                if (s.locked) return showToast("Đã khóa rồi");
+                s.locked = true;
+                showToast("✅ Đã khóa Aptomat");
+            } else if (currentTool === 'tag') {
+                if (!s.locked) return showToast("⚠️ Phải khóa trước!");
+                s.tagged = true;
+                showToast("✅ Đã treo thẻ");
+            } else if (currentTool === 'meter') {
+                showToast("⏳ Đang đo...");
+                setTimeout(()=> showToast(s.mainCB ? "⚡ 380V" : "✅ 0V"), 1000);
+            } else if (!currentTool) {
+                // Toggle
+                if (s.locked) return showToast("⛔ Đã khóa LOTO!");
+                s.mainCB = !s.mainCB;
+            }
+            
+            renderSimulation('electrical'); // Re-render to show changes
+            if(currentTool) clearTool();
+        }
+
+        // 2. Chemical Logic
+        function handleChemicalInteraction() {
+            const s = simData.chemical;
+
+            if (currentTool === 'lock' || currentTool === 'cover') {
+                if (s.valveOpen) return showToast("💦 Van đang mở! Đóng van trước.");
+                if (s.locked) return showToast("Đã khóa rồi");
+                s.locked = true;
+                showToast("✅ Đã chụp khóa van (Valve Lockout)");
+            } else if (currentTool === 'tag') {
+                // ... tag logic ...
+            } else if (!currentTool) {
+                // Toggle Valve
+                if (s.locked) return showToast("⛔ Van đã bị khóa cứng!");
+                s.valveOpen = !s.valveOpen;
+                showToast(s.valveOpen ? "Đã MỞ van" : "Đã ĐÓNG van");
+            }
+
+            renderSimulation('chemical');
+            if(currentTool) clearTool();
+        }
+
+        // --- COMMON TOOLS UI ---
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); document.getElementById('backdrop').classList.toggle('show'); }
+        function closeSidebar() { document.getElementById('sidebar').classList.remove('active'); document.getElementById('backdrop').classList.remove('show'); }
+        
+        function selectTool(type) {
+            currentTool = type;
+            document.getElementById('active-tool-hud').style.display = 'flex';
+            document.getElementById('hud-text').innerText = type.toUpperCase();
+            closeSidebar();
+        }
+        function clearTool() {
+            currentTool = null;
+            document.getElementById('active-tool-hud').style.display = 'none';
+        }
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.classList.add('show');
+            setTimeout(()=>t.classList.remove('show'), 2000);
+        }
+
+    </script>
+</body>
+</html>
